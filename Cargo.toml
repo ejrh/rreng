@@ -1,0 +1,22 @@
+[package]
+name = "rreng"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_fly_camera = "0.10.0"
+noise = "0.8.2"
+rand = "0.8.5"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.bevy]
+version = "0.10.1"
+default-features = false
+features = [
+    "bevy_winit",
+    "bevy_core_pipeline",
+    "bevy_asset",
+    "bevy_render",
+    "bevy_pbr"
+]
