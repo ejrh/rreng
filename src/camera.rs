@@ -10,7 +10,8 @@ impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app
         .add_startup_system(create_camera)
-        .add_system(camera_movement);
+        .add_system(camera_movement)
+        .add_system(update_camera_position);
    }
 }
 
@@ -41,7 +42,7 @@ fn camera_movement(time: Res<Time>,
     keyboard_input: Res<Input<KeyCode>>,
     mut query: Query<(&mut CameraState, &mut Transform)>
 ) {
-    let (mut state, mut transform) = query.single_mut();
+    let (mut state, transform) = query.single_mut();
 
     let mut movement_delta = Vec3::ZERO;
     let mut yaw_delta = 0.0;
@@ -85,11 +86,12 @@ fn camera_movement(time: Res<Time>,
     if distance_delta != 0.0 {
         state.distance *= 2.0f32.powf(distance_delta * time.delta_seconds());
     }
-
-    update_camera_position(&mut transform, &state);
 }
 
-fn update_camera_position(transform: &mut Transform, state: &CameraState) {
+fn update_camera_position(mut query: Query<(&CameraState, &mut Transform), Changed<CameraState>>) {
+    let Ok((state, mut transform)) = query.get_single_mut()
+        else { return; };
+
     transform.rotation = Quat::from_axis_angle(Vec3::Y, state.yaw)
         * Quat::from_axis_angle(Vec3::X, state.pitch);
     let up_to_camera = transform.rotation.mul_vec3(Vec3::Z);
