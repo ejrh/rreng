@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::f32::consts::{TAU};
 use bevy::prelude::*;
 
 #[derive(Default)]
@@ -38,7 +38,7 @@ fn create_lights(mut commands: Commands) {
 fn move_sun(time: Res<Time>, mut query: Query<(&mut Sun, &mut Transform, &mut DirectionalLight)>) {
     let (mut sun, mut transform, mut light) = query.single_mut();
 
-    sun.angle += 2.0*PI/100.0 * time.delta_seconds();
+    sun.angle += TAU/100.0 * time.delta_seconds();
     let where_in_sky = Quat::from_axis_angle(Vec3::Z, sun.angle);
     let where_in_sky= where_in_sky.mul_vec3(Vec3::X);
     let altitude = where_in_sky.dot(Vec3::Y);

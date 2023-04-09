@@ -1,4 +1,5 @@
-use std::f32::consts::PI;
+use std::f32::consts::TAU;
+use std::ops::Range;
 
 use bevy::prelude::*;
 
@@ -21,6 +22,8 @@ struct CameraState {
     yaw: f32,
     pitch: f32,
     distance: f32,
+    focus_range: Range<Vec3>,
+    distance_range: Range<f32>,
 }
 
 impl Default for CameraState {
@@ -28,8 +31,10 @@ impl Default for CameraState {
         CameraState {
             focus: Default::default(),
             yaw: Default::default(),
-            pitch: -PI/4.0,
-            distance: 50.0
+            pitch: -TAU/8.0,
+            distance: 50.0,
+            focus_range: Vec3::new(0.0, 0.0, 0.0)..Vec3::new(100.0, 100.0, 100.0),
+            distance_range: 10.0..120.0,
         }
     }
 }
@@ -60,10 +65,10 @@ fn camera_movement(time: Res<Time>,
         movement_delta.x += 1.0;
     }
     if keyboard_input.pressed(KeyCode::Q) {
-        yaw_delta += PI/4.0;
+        yaw_delta += TAU/8.0;
     }
     if keyboard_input.pressed(KeyCode::E) {
-        yaw_delta -= PI/4.0;
+        yaw_delta -= TAU/8.0;
     }
     if keyboard_input.pressed(KeyCode::Z) {
         distance_delta -= 1.0;
@@ -78,13 +83,18 @@ fn camera_movement(time: Res<Time>,
         let movement_delta = transform.rotation.mul_vec3(movement_delta);
         let movement_delta = Vec3 { y: 0.0, ..movement_delta }.normalize() * state.distance;
         state.focus += movement_delta * time.delta_seconds();
+
+        state.focus = state.focus.clamp(state.focus_range.start, state.focus_range.end);
     }
 
     state.yaw += yaw_delta * time.delta_seconds();
-    //normalise?
+    if state.yaw < 0.0 { state.yaw += TAU; }
+    else if state.yaw >= TAU { state.yaw -= TAU; }
 
     if distance_delta != 0.0 {
         state.distance *= 2.0f32.powf(distance_delta * time.delta_seconds());
+
+        state.distance = state.distance.clamp(state.distance_range.start, state.distance_range.end);
     }
 }
 
