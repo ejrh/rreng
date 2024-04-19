@@ -1,5 +1,3 @@
-use std::env::join_paths;
-use std::f32::consts::FRAC_PI_2;
 use std::iter::zip;
 use std::path::PathBuf;
 
@@ -7,6 +5,7 @@ use bevy::{
     render::mesh::{Indices, PrimitiveTopology},
     prelude::*,
 };
+use bevy::render::render_asset::RenderAssetUsages;
 use noise::{NoiseFn, Simplex};
 
 use crate::datafile;
@@ -15,7 +14,7 @@ fn heightmap_to_mesh(heights: &Vec<Vec<f32>>, scale: &Vec3) -> Mesh {
     let height = heights.len();
     let width = heights[0].len();
 
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD);
     let mut verts = Vec::new();
     let mut cols = Vec::new();
     for i in 0..height {
@@ -87,7 +86,7 @@ fn heightmap_to_mesh(heights: &Vec<Vec<f32>>, scale: &Vec3) -> Mesh {
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION,verts);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, norms);
     //mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, cols);
-    mesh.set_indices(Some(Indices::U32(tris)));
+    mesh.insert_indices(Indices::U32(tris));
 
     mesh
 }

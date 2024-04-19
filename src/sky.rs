@@ -8,8 +8,8 @@ pub(crate) struct SkyPlugin {
 impl Plugin for SkyPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_startup_system(create_lights)
-        .add_system(move_sun);
+        .add_systems(Startup, create_lights)
+        .add_systems(Update, move_sun);
    }
 }
 
@@ -46,9 +46,9 @@ fn move_sun(time: Res<Time>, mut query: Query<(&mut Sun, &mut Transform, &mut Di
     if altitude > 0.5 {
         light.color = Color::WHITE;
     } else if altitude > 0.1 {
-        light.color = Color::from([1.0, altitude*2.0, altitude*2.0])
+        light.color = Color::rgb(1.0, altitude*2.0, altitude*2.0)
     } else if altitude > 0.0 {
-        light.color = Color::from([altitude*10.0, altitude*2.0, altitude*2.0])
+        light.color = Color::rgb(altitude*10.0, altitude*2.0, altitude*2.0)
     } else {
         light.color = Color::BLACK;
     }
