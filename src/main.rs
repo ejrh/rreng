@@ -1,8 +1,9 @@
 use bevy::{
-    diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
+    diagnostic::FrameTimeDiagnosticsPlugin,
     window::close_on_esc,
     prelude::*,
 };
+use bevy::diagnostic::{DiagnosticsStore, LogDiagnosticsPlugin};
 
 mod camera;
 mod datafile;
@@ -12,17 +13,18 @@ mod terrain;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(camera::CameraPlugin::default())
-        .add_plugin(sky::SkyPlugin::default())
-        .add_startup_system(terrain::load_terrain)
-        .add_system(show_fps)
-        .add_system(close_on_esc)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(LogDiagnosticsPlugin::default())
+        .add_plugins(camera::CameraPlugin::default())
+        .add_plugins(sky::SkyPlugin::default())
+        .add_systems(Startup, terrain::load_terrain)
+        .add_systems(Update, show_fps)
+        .add_systems(Update, close_on_esc)
         .run();
 }
 
-fn show_fps(diagnostics: Res<Diagnostics>, mut windows: Query<&mut Window>) {
-    let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS)
+fn show_fps(diagnostics: Res<DiagnosticsStore>, mut windows: Query<&mut Window>) {
+    let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS)
     else { return; };
 
     let Some(value) = fps.smoothed()

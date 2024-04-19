@@ -2,8 +2,6 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use bevy::prelude::*;
-
 use serde::{Deserialize};
 use tiff::decoder::DecodingResult;
 

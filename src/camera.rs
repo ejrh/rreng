@@ -1,5 +1,6 @@
 use std::f32::consts::TAU;
 use std::ops::Range;
+use bevy::core_pipeline::tonemapping::Tonemapping;
 
 use bevy::prelude::*;
 
@@ -10,9 +11,9 @@ pub(crate) struct CameraPlugin {
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_startup_system(create_camera)
-        .add_system(camera_movement)
-        .add_system(update_camera_position);
+        .add_systems(Startup, create_camera)
+        .add_systems(Update, camera_movement)
+        .add_systems(Update, update_camera_position);
    }
 }
 
@@ -40,11 +41,14 @@ impl Default for CameraState {
 }
 
 fn create_camera(mut commands: Commands) {
-    commands.spawn(Camera3dBundle::default()).insert(CameraState::default());
+    commands.spawn(Camera3dBundle {
+        tonemapping: Tonemapping::None,
+        ..default()
+    }).insert(CameraState::default());
 }
 
 fn camera_movement(time: Res<Time>,
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&mut CameraState, &mut Transform)>
 ) {
     let (mut state, transform) = query.single_mut();
@@ -52,28 +56,28 @@ fn camera_movement(time: Res<Time>,
     let mut movement_delta = Vec3::ZERO;
     let mut yaw_delta = 0.0;
     let mut distance_delta: f32 = 0.0;
-    if keyboard_input.pressed(KeyCode::W) {
+    if keyboard_input.pressed(KeyCode::KeyW) {
         movement_delta.z -= 1.0;
     }
-    if keyboard_input.pressed(KeyCode::A) {
+    if keyboard_input.pressed(KeyCode::KeyA) {
         movement_delta.x -= 1.0;
     }
-    if keyboard_input.pressed(KeyCode::S) {
+    if keyboard_input.pressed(KeyCode::KeyS) {
         movement_delta.z += 1.0;
     }
-    if keyboard_input.pressed(KeyCode::D) {
+    if keyboard_input.pressed(KeyCode::KeyD) {
         movement_delta.x += 1.0;
     }
-    if keyboard_input.pressed(KeyCode::Q) {
+    if keyboard_input.pressed(KeyCode::KeyQ) {
         yaw_delta += TAU/8.0;
     }
-    if keyboard_input.pressed(KeyCode::E) {
+    if keyboard_input.pressed(KeyCode::KeyE) {
         yaw_delta -= TAU/8.0;
     }
-    if keyboard_input.pressed(KeyCode::Z) {
+    if keyboard_input.pressed(KeyCode::KeyZ) {
         distance_delta -= 1.0;
     }
-    if keyboard_input.pressed(KeyCode::X) {
+    if keyboard_input.pressed(KeyCode::KeyX) {
         distance_delta += 1.0;
     }
 
