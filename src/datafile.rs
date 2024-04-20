@@ -1,34 +1,95 @@
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+use std::io::Cursor;
 
-use serde::{Deserialize};
+use bevy::asset::{Asset, AssetLoader, AsyncReadExt, BoxedFuture, LoadContext};
+use bevy::asset::io::Reader;
+use bevy::prelude::*;
+use serde::Deserialize;
+use thiserror::Error;
 use tiff::decoder::DecodingResult;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub(crate) struct Chunk {
     pub(crate) position: (isize, isize),
     pub(crate) elevation: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Asset, Clone, Debug, Default, Deserialize, TypePath)]
 pub(crate) struct DataFile {
     pub(crate) chunk_dimensions: (isize, isize),
     pub(crate) chunks: Vec<Chunk>,
 }
 
-pub(crate) fn load_datafile<P: AsRef<Path>>(filename: P) -> std::io::Result<DataFile> {
-    let mut file = File::open(filename)?;
-    let mut json = String::new();
-    file.read_to_string(&mut json)?;
-    let datafile: DataFile = serde_json::from_str(json.as_str())?;
-
-    Ok(datafile)
+#[non_exhaustive]
+#[derive(Debug, Error)]
+pub(crate) enum DataFileLoaderError {
+    #[error("Could not load asset: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Could not deserialise JSON: {0}")]
+    Json(#[from] serde_json::Error),
 }
 
-pub fn load_elevation<P: AsRef<Path>>(filename: P) -> std::io::Result<Vec<Vec<f32>>> {
-    let file = File::open(filename)?;
-    let mut decoder = tiff::decoder::Decoder::new(file).unwrap();
+#[derive(Default)]
+pub(crate) struct DataFileLoader;
+
+impl AssetLoader for DataFileLoader {
+    type Asset = DataFile;
+    type Settings = ();
+    type Error = DataFileLoaderError;
+
+    fn load<'a>(
+        &'a self,
+        reader: &'a mut Reader,
+        _settings: &'a Self::Settings,
+        _load_context: &'a mut LoadContext
+    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
+        Box::pin(async move {
+            let mut str = String::new();
+            reader.read_to_string(&mut str).await?;
+            let datafile = serde_json::from_str(&str)?;
+            Ok(datafile)
+        })
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["json"]
+    }
+}
+
+#[derive(Asset, Debug, TypePath)]
+pub(crate) struct ChunkElevation {
+    pub(crate) heights: Vec<Vec<f32>>,
+}
+
+#[derive(Default)]
+pub(crate) struct ChunkElevationLoader;
+
+impl AssetLoader for ChunkElevationLoader {
+    type Asset = ChunkElevation;
+    type Settings = ();
+    type Error = DataFileLoaderError;
+
+    fn load<'a>(
+        &'a self,
+        reader: &'a mut Reader,
+        _settings: &'a Self::Settings,
+        _load_context: &'a mut LoadContext
+    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
+        Box::pin(async move {
+            let mut bytes = Vec::new();
+            reader.read_to_end(&mut bytes).await?;
+            let chunk_elevation = decode_elevation(&bytes)?;
+            Ok(chunk_elevation)
+        })
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["tif"]
+    }
+}
+
+pub fn decode_elevation(bytes: &[u8]) -> std::io::Result<ChunkElevation> {
+    let cursor = Cursor::new(bytes);
+    let mut decoder = tiff::decoder::Decoder::new(cursor).unwrap();
 
     let dims = decoder.dimensions().unwrap();
     let width = dims.0 as usize;
@@ -45,5 +106,5 @@ pub fn load_elevation<P: AsRef<Path>>(filename: P) -> std::io::Result<Vec<Vec<f3
         }
     }
 
-    Ok(data)
+    Ok(ChunkElevation { heights: data })
 }
