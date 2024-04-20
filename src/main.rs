@@ -3,21 +3,31 @@ use bevy::{
     window::close_on_esc,
     prelude::*,
 };
-use bevy::diagnostic::{DiagnosticsStore, LogDiagnosticsPlugin};
+use bevy::diagnostic::{DiagnosticsStore};
+
+use crate::datafile::{ChunkElevation, ChunkElevationLoader, DataFile, DataFileLoader};
+use crate::terrain::TerrainState;
 
 mod camera;
 mod datafile;
 mod sky;
 mod terrain;
+mod heightmap;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
-        .add_plugins(LogDiagnosticsPlugin::default())
         .add_plugins(camera::CameraPlugin::default())
         .add_plugins(sky::SkyPlugin::default())
-        .add_systems(Startup, terrain::load_terrain)
+        .init_asset::<DataFile>()
+        .init_asset_loader::<DataFileLoader>()
+        .init_asset::<ChunkElevation>()
+        .init_asset_loader::<ChunkElevationLoader>()
+        .init_resource::<TerrainState>()
+        .add_systems(Startup, terrain::load_initial_terrain)
+        .add_systems(Update, terrain::datafile_loaded)
+        .add_systems(Update, terrain::elevation_loaded)
         .add_systems(Update, show_fps)
         .add_systems(Update, close_on_esc)
         .run();
