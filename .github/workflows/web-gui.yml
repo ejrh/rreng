@@ -1,0 +1,49 @@
+name: Web GUI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "web-gui"
+
+      - name: Setup Rust WASM
+        run: |
+          rustup target add wasm32-unknown-unknown || true
+          cargo install wasm-bindgen-cli || true
+
+      - name: Build
+        run: cargo build --release --target wasm32-unknown-unknown
+
+      - name: Generate bindings
+        run: |
+          wasm-bindgen --out-name rreng \
+          --out-dir wasm/target \
+          --target web target/wasm32-unknown-unknown/release/rreng.wasm
+
+      - name: Copy additional files
+        run: |
+          cp assets/index.html wasm/target
+          cp -R assets wasm/target/
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/master'
+        with:
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          publish_dir: wasm/target
+          destination_dir: gui
