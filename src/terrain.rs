@@ -7,7 +7,7 @@ use crate::datafile::{Chunk, ChunkElevation, DataFile};
 use crate::heightmap::heightmap_to_mesh;
 
 #[derive(Debug, Default, Resource)]
-pub(crate) struct TerrainState {
+pub struct TerrainState {
     datafile_handle: Handle<DataFile>,
     datafile: DataFile,
     chunk_handles: Vec<Handle<ChunkElevation>>,

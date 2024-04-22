@@ -14,14 +14,14 @@ pub(crate) struct Chunk {
 }
 
 #[derive(Asset, Clone, Debug, Default, Deserialize, TypePath)]
-pub(crate) struct DataFile {
+pub struct DataFile {
     pub(crate) chunk_dimensions: (isize, isize),
     pub(crate) chunks: Vec<Chunk>,
 }
 
 #[non_exhaustive]
 #[derive(Debug, Error)]
-pub(crate) enum DataFileLoaderError {
+pub enum DataFileLoaderError {
     #[error("Could not load asset: {0}")]
     Io(#[from] std::io::Error),
     #[error("Could not deserialise JSON: {0}")]
@@ -29,7 +29,7 @@ pub(crate) enum DataFileLoaderError {
 }
 
 #[derive(Default)]
-pub(crate) struct DataFileLoader;
+pub struct DataFileLoader;
 
 impl AssetLoader for DataFileLoader {
     type Asset = DataFile;
@@ -56,12 +56,12 @@ impl AssetLoader for DataFileLoader {
 }
 
 #[derive(Asset, Debug, TypePath)]
-pub(crate) struct ChunkElevation {
+pub struct ChunkElevation {
     pub(crate) heights: Vec<Vec<f32>>,
 }
 
 #[derive(Default)]
-pub(crate) struct ChunkElevationLoader;
+pub struct ChunkElevationLoader;
 
 impl AssetLoader for ChunkElevationLoader {
     type Asset = ChunkElevation;

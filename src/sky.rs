@@ -2,7 +2,7 @@ use std::f32::consts::{TAU};
 use bevy::prelude::*;
 
 #[derive(Default)]
-pub(crate) struct SkyPlugin {
+pub struct SkyPlugin {
 }
 
 impl Plugin for SkyPlugin {
