@@ -5,7 +5,7 @@ use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 
 #[derive(Default)]
-pub(crate) struct CameraPlugin {
+pub struct CameraPlugin {
 }
 
 impl Plugin for CameraPlugin {
