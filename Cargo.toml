@@ -22,5 +22,6 @@ features = [
     "bevy_asset",
     "bevy_render",
     "bevy_pbr",
+    "bevy_ui",
     "webgl2"
 ]
