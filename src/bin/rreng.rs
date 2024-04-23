@@ -21,6 +21,7 @@ fn main() {
         .add_systems(Update, terrain::datafile_loaded)
         .add_systems(Update, terrain::elevation_loaded)
         .add_systems(Update, utils::show_fps)
+        .add_systems(Startup, utils::show_version)
         .add_systems(Update, close_on_esc)
         .run();
 }
