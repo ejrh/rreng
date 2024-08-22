@@ -3,8 +3,8 @@ use bevy::{
 };
 use noise::{NoiseFn, Simplex};
 
-use crate::datafile::{Chunk, ChunkElevation, DataFile};
-use crate::heightmap::heightmap_to_mesh;
+use crate::terrain::datafile::{Chunk, ChunkElevation, DataFile};
+use crate::terrain::heightmap::heightmap_to_mesh;
 
 #[derive(Debug, Default, Resource)]
 pub struct TerrainState {
