@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use bevy::color::palettes::basic::{BLUE, GREEN, RED};
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::PrimitiveTopology;
@@ -36,10 +37,10 @@ pub fn update_meshes(
         let spacing = 1;
 
         let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
-        let colour = if block_info.block_num.0 + block_info.block_num.1 == 0 { Color::RED }
-            else if (block_info.block_num.0 + block_info.block_num.1) & 1 == 0 { Color::GREEN }
-            else { Color::BLUE };
-        let material = materials.add(create_material(colour));
+        let colour = if block_info.block_num.0 + block_info.block_num.1 == 0 { RED }
+            else if (block_info.block_num.0 + block_info.block_num.1) & 1 == 0 { GREEN }
+            else { BLUE };
+        let material = materials.add(create_material(Color::Srgba(colour)));
         let mesh = meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32)));
         let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
         let yp = block_info.block_num.0 as f32 * terrain.block_size as f32;

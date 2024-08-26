@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use bevy::asset::{Asset, AssetLoader, AsyncReadExt, BoxedFuture, LoadContext};
+use bevy::asset::{Asset, AssetLoader, AsyncReadExt, LoadContext};
 use bevy::asset::io::Reader;
 use bevy::prelude::*;
 use serde::Deserialize;
@@ -36,18 +36,16 @@ impl AssetLoader for DataFileLoader {
     type Settings = ();
     type Error = DataFileLoaderError;
 
-    fn load<'a>(
+    async fn load<'a>(
         &'a self,
-        reader: &'a mut Reader,
+        reader: &'a mut Reader<'_>,
         _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext
-    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
-        Box::pin(async move {
-            let mut str = String::new();
-            reader.read_to_string(&mut str).await?;
-            let datafile = serde_json::from_str(&str)?;
-            Ok(datafile)
-        })
+        _load_context: &'a mut LoadContext<'_>
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut str = String::new();
+        reader.read_to_string(&mut str).await?;
+        let datafile = serde_json::from_str(&str)?;
+        Ok(datafile)
     }
 
     fn extensions(&self) -> &[&str] {
@@ -68,18 +66,16 @@ impl AssetLoader for ElevationFileLoader {
     type Settings = ();
     type Error = DataFileLoaderError;
 
-    fn load<'a>(
+    async fn load<'a>(
         &'a self,
-        reader: &'a mut Reader,
+        reader: &'a mut Reader<'_>,
         _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext
-    ) -> BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
-        Box::pin(async move {
-            let mut bytes = Vec::new();
-            reader.read_to_end(&mut bytes).await?;
-            let elevation_file = decode_elevation(&bytes)?;
-            Ok(elevation_file)
-        })
+        _load_context: &'a mut LoadContext<'_>
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).await?;
+        let elevation_file = decode_elevation(&bytes)?;
+        Ok(elevation_file)
     }
 
     fn extensions(&self) -> &[&str] {

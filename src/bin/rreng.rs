@@ -1,7 +1,6 @@
 use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
     prelude::*,
-    window::close_on_esc,
 };
 
 use rreng::*;
@@ -15,6 +14,6 @@ fn main() {
         .add_plugins(terrain::TerrainPlugin::default())
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)
-        .add_systems(Update, close_on_esc)
+        .add_systems(Update, utils::close_on_esc)
         .run();
 }

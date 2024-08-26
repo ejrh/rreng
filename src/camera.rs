@@ -1,6 +1,6 @@
 use std::f32::consts::TAU;
 use std::ops::Range;
-
+use bevy::color::palettes::basic::GRAY;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
 
@@ -134,7 +134,7 @@ pub fn create_camera_position_text(
     let text_style = TextStyle {
         font: font.clone(),
         font_size: 16.0,
-        color: Color::GRAY,
+        color: Color::Srgba(GRAY),
     };
 
     commands.spawn(TextBundle::from_section("", text_style)

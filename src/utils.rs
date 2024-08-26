@@ -1,6 +1,6 @@
+use bevy::color::palettes::basic::YELLOW;
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
-use bevy::sprite::Anchor;
 
 pub fn show_fps(diagnostics: Res<DiagnosticsStore>, mut windows: Query<&mut Window>) {
     let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS)
@@ -9,8 +9,9 @@ pub fn show_fps(diagnostics: Res<DiagnosticsStore>, mut windows: Query<&mut Wind
     let Some(value) = fps.smoothed()
         else { return; };
 
-    let mut window = windows.single_mut();
-    window.title = format!("FPS: {}", value);
+    if let Ok(mut window) = windows.get_single_mut() {
+        window.title = format!("FPS: {}", value);
+    }
 }
 
 pub fn show_version(
@@ -25,7 +26,7 @@ pub fn show_version(
     let text_style = TextStyle {
         font: font.clone(),
         font_size: 20.0,
-        color: Color::GOLD,
+        color: Color::Srgba(YELLOW),
     };
 
     commands.spawn(TextBundle::from_section(version_str, text_style)
@@ -36,4 +37,20 @@ pub fn show_version(
             ..default()
         })
     );
+}
+
+pub fn close_on_esc(
+    mut commands: Commands,
+    focused_windows: Query<(Entity, &Window)>,
+    input: Res<ButtonInput<KeyCode>>,
+) {
+    for (window, focus) in focused_windows.iter() {
+        if !focus.focused {
+            continue;
+        }
+
+        if input.just_pressed(KeyCode::Escape) {
+            commands.entity(window).despawn();
+        }
+    }
 }
