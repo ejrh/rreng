@@ -12,6 +12,7 @@ impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app
         .add_systems(Startup, create_camera)
+        .add_systems(Startup, create_camera_position_text)
         .add_systems(Update, camera_movement)
         .add_systems(Update, update_camera_position);
    }
@@ -39,6 +40,9 @@ impl Default for CameraState {
         }
     }
 }
+
+#[derive(Component)]
+struct CameraPositionLabel;
 
 fn create_camera(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
@@ -102,7 +106,10 @@ fn camera_movement(time: Res<Time>,
     }
 }
 
-fn update_camera_position(mut query: Query<(&CameraState, &mut Transform), Changed<CameraState>>) {
+fn update_camera_position(
+    mut query: Query<(&CameraState, &mut Transform), Changed<CameraState>>,
+    mut text_query: Query<&mut Text, With<CameraPositionLabel>>
+) {
     let Ok((state, mut transform)) = query.get_single_mut()
         else { return; };
 
@@ -110,4 +117,32 @@ fn update_camera_position(mut query: Query<(&CameraState, &mut Transform), Chang
         * Quat::from_axis_angle(Vec3::X, state.pitch);
     let up_to_camera = transform.rotation.mul_vec3(Vec3::Z);
     transform.translation = state.focus + state.distance * up_to_camera;
+
+    /* Update position text if it exists */
+    if let Ok(mut text) = text_query.get_single_mut() {
+        text.sections[0].value = format!("Camera: focus {:3.0}, {:3.0}; yaw {:3.0}",
+                                         state.focus.z, state.focus.x, state.yaw.to_degrees());
+    }
+}
+
+pub fn create_camera_position_text(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
+
+    let text_style = TextStyle {
+        font: font.clone(),
+        font_size: 16.0,
+        color: Color::GRAY,
+    };
+
+    commands.spawn(TextBundle::from_section("", text_style)
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.0),
+            right: Val::Px(10.0),
+            ..default()
+        })
+    ).insert(CameraPositionLabel);
 }
