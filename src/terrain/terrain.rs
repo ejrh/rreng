@@ -1,156 +1,68 @@
-use bevy::{
-    prelude::*,
-};
-use noise::{NoiseFn, Simplex};
+use std::ops::Range;
 
-use crate::terrain::datafile::{Chunk, ChunkElevation, DataFile};
+use bevy::prelude::*;
+use ndarray::s;
+
+use crate::terrain::datafile::DataFile;
 use crate::terrain::heightmap::heightmap_to_mesh;
+use crate::terrain::utils::{Range2, get_copyable_range, restrict_ranges};
 
-#[derive(Debug, Default, Resource)]
-pub struct TerrainState {
-    datafile_handle: Handle<DataFile>,
-    datafile: DataFile,
-    chunk_handles: Vec<Handle<ChunkElevation>>,
-    all_elevation_data: Vec<Vec<f32>>,
+#[derive(Default, Debug)]
+pub struct BlockInfo {
+    pub block_num: (usize, usize),
+    pub range: Range2,
+    pub dirty: bool,
+    pub mesh_entity: Option<Entity>,
 }
 
-impl TerrainState {
-    fn get_chunk(&self, asset_id: AssetId<ChunkElevation>) -> Option<&Chunk> {
-        for (idx, handle) in self.chunk_handles.iter().enumerate() {
-            if handle.id() == asset_id {
-                return Some(&self.datafile.chunks[idx]);
-            }
-        }
-        None
+#[derive(Default, Debug, Resource)]
+pub struct Terrain {
+    pub block_size: usize,
+    pub resolution: Vec3,
+    pub num_blocks: [usize; 2],
+    pub elevation: ndarray::Array2<f32>,
+    pub block_info: ndarray::Array2<BlockInfo>,
+}
+
+impl Terrain {
+    pub(crate) fn reset(&mut self, datafile: &DataFile) {
+        self.block_size = 128;
+        self.resolution = Vec3::new(1.0, 1.0, 1.0);
+        self.num_blocks = [30, 40];
+        let point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
+        self.elevation = ndarray::Array2::default(point_dims);
+        self.block_info = ndarray::Array2::from_shape_fn(self.num_blocks, |(r, c)| BlockInfo {
+            block_num: (r, c),
+            range: Range2(r * self.block_size..(r+1) * self.block_size + 1, c * self.block_size..(c+1) * self.block_size + 1),
+            dirty: false,
+            mesh_entity: None,
+        });
     }
-}
 
-pub fn load_initial_terrain(
-    mut terrain_state: ResMut<TerrainState>,
-    asset_server: Res<AssetServer>,
-) {
-    terrain_state.datafile_handle = asset_server.load::<DataFile>("data/jvl.json");
-    info!("datafile loading");
-}
+    pub fn set_elevation(&mut self, offset: (isize, isize), data: ndarray::ArrayView2<f32>) {
+        let data_dims = data.dim();
+        let point_dims = self.elevation.dim();
+        let (from_rows, to_rows) = get_copyable_range(data_dims.0, offset.0, point_dims.0);
+        let (from_cols, to_cols) = get_copyable_range(data_dims.1, offset.1, point_dims.1);
 
-pub fn datafile_loaded(
-    mut terrain_state: ResMut<TerrainState>,
-    mut events: EventReader<AssetEvent<DataFile>>,
-    assets: Res<Assets<DataFile>>,
-    asset_server: Res<AssetServer>,
-) {
-    for evt in events.read() {
-        if let AssetEvent::Added { id } = evt {
-            info!("datafile loaded: {id}");
-            terrain_state.datafile = assets.get(*id).unwrap().clone();
-            let datafile_path = asset_server.get_path(*id).unwrap();
+        if from_rows.is_empty() || from_cols.is_empty() { return; }
 
-            /* Process the data file and load the chunk elevations */
-            let SCALING = 10;
-            let all_width = 480 * 8 / SCALING as usize;
-            let all_height=  720 * 3 / SCALING as usize;
-            terrain_state.all_elevation_data = vec!(vec!(0.0; all_width); all_height);
+        let data_range = Range2(to_rows.clone(), to_cols.clone());
+        info!("set_elevation {data_range:?}");
 
-            let mut chunk_handles = Vec::new();
-            for chunk in &terrain_state.datafile.chunks {
-                let elevation_path = datafile_path.parent().unwrap().resolve(&chunk.elevation).unwrap();
-                chunk_handles.push(asset_server.load::<ChunkElevation>(elevation_path));
-                info!("elevation loading");
-            }
-            terrain_state.chunk_handles = chunk_handles;
-        }
-    }
-}
+        let src = data.slice(s!(from_rows, from_cols));
+        let mut dest = self.elevation.slice_mut(s!(to_rows, to_cols));
+        dest.assign(&src);
 
-pub fn elevation_loaded(
-    mut terrain_state: ResMut<TerrainState>,
-    mut events: EventReader<AssetEvent<ChunkElevation>>,
-    assets: Res<Assets<ChunkElevation>>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>
-) {
-    let SCALING = 10;
-
-    let mut assets_added = 0;
-
-    for evt in events.read() {
-        if let AssetEvent::Added { id } = evt {
-            info!("elevation loaded: {id}");
-
-            let chunk_elevation  = assets.get(*id).unwrap();
-            let data = &chunk_elevation.heights;
-
-            let Some(chunk) = terrain_state.get_chunk(*id)
-            else { continue };
-
-            let elevation_data = data[0..720].iter().step_by(SCALING).map(
-                |x| x[0..480].iter().step_by(SCALING).map(|x| *x).collect::<Vec<_>>()
-            ).collect::<Vec<_>>();
-
-            let i_offset = chunk.position.1 as usize * 720 / SCALING;
-            let j_offset = chunk.position.0 as usize * 480 / SCALING;
-            for i in 0..elevation_data.len() {
-                for j in 0..elevation_data[i].len() {
-                    terrain_state.all_elevation_data[i + i_offset][j + j_offset] = elevation_data[i][j];
+        for i in 0..self.num_blocks[0] {
+            for j in 0..self.num_blocks[1] {
+                let block_info = &mut self.block_info[(i, j)];
+                if !block_info.range.overlaps(&data_range) {
+                    continue;
                 }
+
+                block_info.dirty = true;
             }
-
-            assets_added += 1;
         }
     }
-
-    if assets_added == 0 { return }
-
-    let all_elevation_data = terrain_state.all_elevation_data.iter().map(|x| x.clone()).rev().collect::<Vec<_>>();
-
-    let mesh = heightmap_to_mesh(&all_elevation_data, &Vec3::new( SCALING as f32, 1.0, SCALING as f32));
-    let mesh = meshes.add(mesh);
-
-    info!("Created mesh");
-
-    commands.spawn(PbrBundle {
-        mesh,
-        material: materials.add(StandardMaterial {
-            base_color: Color::rgb(0.3, 0.8, 0.4),
-            perceptual_roughness: 0.9,
-            ..default()
-        }),
-        ..default()
-    });
-
-}
-
-pub(crate) fn create_terrain(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>
-) {
-    let noise = Simplex::new(42);
-
-    const GRID_SIZE: usize = 10;
-    let mut grid = Vec::new();
-    for i in 0..GRID_SIZE + 1 {
-        grid.push(Vec::new());
-        for j in 0..GRID_SIZE + 1 {
-            let height = noise.get([i as f64 / GRID_SIZE as f64 * 1.0, j as f64  / GRID_SIZE as f64 * 1.0]) as f32;
-            let height = height;
-            grid[i].push(height);
-        }
-    }
-
-    const GRID_SPACING: f32 = 100.0 / GRID_SIZE as f32;
-
-    let mesh= heightmap_to_mesh(&grid, &Vec3::new(GRID_SPACING, 25.0, GRID_SPACING));
-    let mesh = meshes.add(mesh);
-
-    commands.spawn(PbrBundle {
-        mesh,
-        material: materials.add(StandardMaterial {
-            base_color: Color::rgb(0.3, 0.8, 0.4),
-            perceptual_roughness: 0.9,
-            ..default()
-        }),
-        ..default()
-    });
 }

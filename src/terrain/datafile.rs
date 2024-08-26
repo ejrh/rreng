@@ -56,15 +56,15 @@ impl AssetLoader for DataFileLoader {
 }
 
 #[derive(Asset, Debug, TypePath)]
-pub struct ChunkElevation {
-    pub(crate) heights: Vec<Vec<f32>>,
+pub struct ElevationFile {
+    pub(crate) heights: ndarray::Array2<f32>,
 }
 
 #[derive(Default)]
-pub struct ChunkElevationLoader;
+pub struct ElevationFileLoader;
 
-impl AssetLoader for ChunkElevationLoader {
-    type Asset = ChunkElevation;
+impl AssetLoader for ElevationFileLoader {
+    type Asset = ElevationFile;
     type Settings = ();
     type Error = DataFileLoaderError;
 
@@ -77,8 +77,8 @@ impl AssetLoader for ChunkElevationLoader {
         Box::pin(async move {
             let mut bytes = Vec::new();
             reader.read_to_end(&mut bytes).await?;
-            let chunk_elevation = decode_elevation(&bytes)?;
-            Ok(chunk_elevation)
+            let elevation_file = decode_elevation(&bytes)?;
+            Ok(elevation_file)
         })
     }
 
@@ -87,7 +87,7 @@ impl AssetLoader for ChunkElevationLoader {
     }
 }
 
-pub fn decode_elevation(bytes: &[u8]) -> std::io::Result<ChunkElevation> {
+pub fn decode_elevation(bytes: &[u8]) -> std::io::Result<ElevationFile> {
     let cursor = Cursor::new(bytes);
     let mut decoder = tiff::decoder::Decoder::new(cursor).unwrap();
 
@@ -98,13 +98,13 @@ pub fn decode_elevation(bytes: &[u8]) -> std::io::Result<ChunkElevation> {
     let im = decoder.read_image().unwrap();
     let DecodingResult::F32(raw_data) = im else { panic!() };
 
-    let mut data = Vec::new();
+    let mut data = ndarray::Array2::zeros((height, width));
+
     for i in 0..height {
-        data.push(Vec::new());
         for j in 0..width {
-            data[i].push(raw_data[i * width + j]);
+            data[(i, j)] = raw_data[i * width + j];
         }
     }
 
-    Ok(ChunkElevation { heights: data })
+    Ok(ElevationFile { heights: data })
 }
