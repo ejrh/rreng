@@ -39,6 +39,7 @@ impl Plugin for TerrainPlugin {
             .add_systems(Startup, loading::load_initial_terrain)
             .add_systems(Update, loading::datafile_loaded)
             .add_systems(Update, loading::elevation_loaded)
-            .add_systems(Update, rendering::update_meshes);
+            .add_systems(Update, rendering::update_meshes)
+            .add_systems(Update, rendering::swap_mesh_alternates);
     }
 }

@@ -12,6 +12,13 @@ pub struct TerrainMesh {
     block_num: (usize, usize),
 }
 
+#[derive(Component)]
+pub struct TerrainMeshAlternates {
+    cutoff: f32,
+    high_res: Handle<Mesh>,
+    low_res: Handle<Mesh>,
+}
+
 pub fn update_meshes(
     mut terrain: ResMut<Terrain>,
     terrain_meshes: Query<(Entity, &TerrainMesh)>,
@@ -34,32 +41,84 @@ pub fn update_meshes(
             entity
         });
 
-        let spacing = 1;
+        let high_res = {
+            let spacing = 1;
+            let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
+            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32)))
+        };
 
-        let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
+        let low_res = {
+            let spacing = 4;
+            let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
+            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32)))
+        };
+
         let colour = if block_info.block_num.0 + block_info.block_num.1 == 0 { RED }
-            else if (block_info.block_num.0 + block_info.block_num.1) & 1 == 0 { GREEN }
-            else { BLUE };
+        else if (block_info.block_num.0 + block_info.block_num.1) & 1 == 0 { GREEN }
+        else { BLUE };
         let material = materials.add(create_material(Color::Srgba(colour)));
-        let mesh = meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32)));
+
         let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
         let yp = block_info.block_num.0 as f32 * terrain.block_size as f32;
         let transform = Transform::from_xyz(xp, 0.0, yp);
+
+        let mesh = low_res.clone();
+
+        let alternates = TerrainMeshAlternates {
+            cutoff: 1000.0,
+            high_res,
+            low_res,
+        };
 
         commands.entity(entity).insert(MaterialMeshBundle {
             material,
             mesh,
             transform,
             ..default()
-        });
+        }).insert(alternates);
+
         info!("spawned terrain mesh");
     }
 
+    /* Clean up orphaned terrain meshes */
     for (entity, terrain_mesh) in terrain_meshes.iter() {
         let block_info = &terrain.block_info[terrain_mesh.block_num];
         if block_info.mesh_entity != Some(entity) {
             info!("despawn orphaned terrain mesh");
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+pub fn swap_mesh_alternates(
+    camera_query: Query<&Transform, (With<Camera>, Changed<Transform>)>,
+    mesh_alternates: Query<(Entity, &Handle<Mesh>, &Transform, &TerrainMeshAlternates)>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,
+) {
+    const TOLERANCE: f32 = 50.0;
+
+    let Ok(camera_transform) = camera_query.get_single() else { return };
+
+    for (entity, current, transform, alternates) in mesh_alternates.iter() {
+
+        let dist = transform.translation.distance(camera_transform.translation);
+
+        let diff = dist - alternates.cutoff;
+
+        let (preferred, colour) = if diff < 0.0 {
+            (&alternates.high_res, GREEN)
+        } else {
+            (&alternates.low_res, BLUE)
+        };
+
+        if !current.eq(preferred) {
+            if diff.abs() < TOLERANCE {
+                continue;
+            }
+
+            let material = materials.add(create_material(Color::Srgba(colour)));
+            commands.entity(entity).insert((preferred.clone(), material));
         }
     }
 }
