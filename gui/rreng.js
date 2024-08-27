@@ -2019,7 +2019,7 @@ function __wbg_get_imports() {
         const ret = makeMutClosure(arg0, arg1, 2566, __wbg_adapter_32);
         return addHeapObject(ret);
     };
-    imports.wbg.__wbindgen_closure_wrapper75630 = function(arg0, arg1, arg2) {
+    imports.wbg.__wbindgen_closure_wrapper75627 = function(arg0, arg1, arg2) {
         const ret = makeMutClosure(arg0, arg1, 56536, __wbg_adapter_55);
         return addHeapObject(ret);
     };
