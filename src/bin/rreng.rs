@@ -14,6 +14,7 @@ fn main() {
         .add_plugins(terrain::TerrainPlugin::default())
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)
+        .add_systems(Startup, utils::show_help_text)
         .add_systems(Update, utils::close_on_esc)
         .run();
 }

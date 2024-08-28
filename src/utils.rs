@@ -1,4 +1,4 @@
-use bevy::color::palettes::basic::YELLOW;
+use bevy::color::palettes::basic::{GRAY, YELLOW};
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 
@@ -33,6 +33,30 @@ pub fn show_version(
         .with_style(Style {
             position_type: PositionType::Absolute,
             bottom: Val::Px(10.0),
+            right: Val::Px(10.0),
+            ..default()
+        })
+    );
+}
+
+pub fn show_help_text(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
+
+    let text_style = TextStyle {
+        font: font.clone(),
+        font_size: 16.0,
+        color: Color::Srgba(GRAY),
+    };
+
+    const HELP_STR: &str = "Controls: WASD move, QE rotate, ZX zoom";
+
+    commands.spawn(TextBundle::from_section(HELP_STR, text_style)
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(40.0),
             right: Val::Px(10.0),
             ..default()
         })
