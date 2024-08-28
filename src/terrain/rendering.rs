@@ -1,9 +1,9 @@
-use std::ops::{Deref, DerefMut};
 use bevy::color::palettes::basic::{BLUE, GREEN, RED};
 use bevy::prelude::*;
 use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::PrimitiveTopology;
 use ndarray::{s, ArrayView};
+
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::terrain::Terrain;
 
@@ -19,6 +19,8 @@ pub struct TerrainMeshAlternates {
     low_res: Handle<Mesh>,
 }
 
+const RENDERS_PER_FRAME: usize = 1;
+
 pub fn update_meshes(
     mut terrain: ResMut<Terrain>,
     terrain_meshes: Query<(Entity, &TerrainMesh)>,
@@ -26,11 +28,12 @@ pub fn update_meshes(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
-    let terrain = terrain.deref_mut();
+    /* Explicitly borrow the object so we can simultaneously borrow different fields  of it later */
+    let terrain = &mut *terrain;
 
-    for block_info in terrain.block_info.iter_mut() {
-        if !block_info.dirty { continue; }
-
+    for block_info in terrain.block_info.iter_mut()
+        .filter(|bi| bi.dirty)
+        .take(RENDERS_PER_FRAME) {
         block_info.dirty = false;
 
         let entity = block_info.mesh_entity
