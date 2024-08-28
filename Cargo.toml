@@ -5,6 +5,7 @@ edition = "2021"
 rust-version = "1.75"
 
 [dependencies]
+bevy-inspector-egui = "0.25"
 noise = "0.9"
 ndarray = "0.16"
 rand = "0.8"

@@ -2,6 +2,7 @@ use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
     prelude::*,
 };
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use rreng::*;
 
@@ -16,5 +17,6 @@ fn main() {
         .add_systems(Startup, utils::show_version)
         .add_systems(Startup, utils::show_help_text)
         .add_systems(Update, utils::close_on_esc)
+        .add_plugins(WorldInspectorPlugin::new())
         .run();
 }
