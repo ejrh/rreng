@@ -1,4 +1,4 @@
-use std::f32::consts::{TAU};
+use std::f32::consts::TAU;
 
 use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
@@ -20,8 +20,10 @@ struct Sun {
     angle: f32
 }
 
-const SUN_RADIUS: f32 = 200.0;
-const SUN_DISTANCE: f32 = 0.0;
+const SUN_RADIUS: f32 = 700.0;
+const SUN_DISTANCE: f32 = 149000.0;
+const SUN_COLOUR: Color = Color::srgb(1.0, 1.0, 0.75);
+const SECONDS_PER_DAY: f32 = 1000.0;
 
 fn create_lights(
     mut meshes: ResMut<Assets<Mesh>>,
@@ -34,39 +36,45 @@ fn create_lights(
     });
 
     commands
-        .spawn(DirectionalLightBundle {
-            directional_light: DirectionalLight {
-                illuminance: 2500.0,
-                shadows_enabled: true,
+        .spawn(Sun { angle: 0.0 })
+        .insert({
+            let sun_mesh: Mesh = Sphere::new(SUN_RADIUS).into();
+            let mut sun_material = StandardMaterial::from(SUN_COLOUR);
+            sun_material.unlit = true;
+            MaterialMeshBundle {
+                mesh: meshes.add(sun_mesh),
+                material: materials.add(sun_material),
+                transform: Transform::from_xyz(SUN_DISTANCE, 0.0, 0.0),
                 ..default()
-            },
-            transform: Transform::from_xyz(100.0, 100.0, 100.0).looking_at(Vec3::ZERO, Vec3::Y),
-            ..default()
-        })
-        .insert(Sun { angle: 0.0 })
+            }})
+        .insert((NotShadowCaster, NotShadowReceiver))
         .with_children(|cb| {
-            cb
-                .spawn({
-                    let sun_mesh: Mesh = Sphere::new(SUN_RADIUS).into();
-                    let mut sun_material = StandardMaterial::from(Color::srgb(1.0, 1.0, 0.75));
-                    sun_material.unlit = true;
-                    MaterialMeshBundle {
-                        mesh: meshes.add(sun_mesh),
-                        material: materials.add(sun_material),
-                        transform: Transform::from_xyz(SUN_DISTANCE, 0.0, 0.0),
-                        ..default()
-                    }})
-                .insert((NotShadowCaster, NotShadowReceiver));
+            cb.spawn(DirectionalLightBundle {
+                directional_light: DirectionalLight {
+                    illuminance: 2500.0,
+                    shadows_enabled: true,
+                    ..default()
+                },
+                transform: Transform::default().looking_at(-Vec3::X, Vec3::Y),
+                ..default()
+            });
         });
 }
 
-fn move_sun(time: Res<Time>, mut query: Query<(&mut Sun, &mut Transform, &mut DirectionalLight)>) {
-    let (mut sun, mut transform, mut light) = query.single_mut();
+fn move_sun(
+    time: Res<Time>,
+    mut sun_query: Query<(&mut Sun, &mut Transform)>,
+    mut light_query: Query<&mut DirectionalLight>,
+) {
+    let (mut sun, mut transform) = sun_query.single_mut();
 
-    sun.angle += TAU/100.0 * time.delta_seconds();
-    let where_in_sky = Quat::from_axis_angle(Vec3::Z, sun.angle);
-    let where_in_sky= where_in_sky.mul_vec3(Vec3::X);
-    let altitude = where_in_sky.dot(Vec3::Y);
+    sun.angle += TAU/SECONDS_PER_DAY * time.delta_seconds();
+    transform.rotation = Quat::from_axis_angle(Vec3::Z, sun.angle);
+    transform.translation = transform.rotation.mul_vec3(Vec3::new(SUN_DISTANCE, 0.0, 0.0));
+
+    let altitude = transform.translation.y / SUN_DISTANCE;
+
+    let mut light = light_query.single_mut();
 
     if altitude > 0.5 {
         light.color = Color::WHITE;
@@ -77,6 +85,4 @@ fn move_sun(time: Res<Time>, mut query: Query<(&mut Sun, &mut Transform, &mut Di
     } else {
         light.color = Color::BLACK;
     }
-    let where_in_sky = where_in_sky * SUN_DISTANCE;
-    *transform = Transform::from_translation(where_in_sky).looking_at(Vec3::ZERO, Vec3::Y);
 }
