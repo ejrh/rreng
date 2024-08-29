@@ -1,4 +1,5 @@
 use bevy::{
+    asset::AssetMetaCheck,
     diagnostic::FrameTimeDiagnosticsPlugin,
     prelude::*,
 };
@@ -8,8 +9,10 @@ fn main() {
     let mut app = App::new();
 
     app
-        .add_plugins(DefaultPlugins)
-        .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin { meta_check: AssetMetaCheck::Never, ..default() })
+        ).add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(camera::CameraPlugin::default())
         .add_plugins(sky::SkyPlugin::default())
         .add_plugins(terrain::TerrainPlugin::default())
