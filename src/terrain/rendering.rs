@@ -94,8 +94,8 @@ pub fn update_meshes(
 }
 
 pub fn swap_mesh_alternates(
-    camera_query: Query<&Transform, (With<Camera>, Changed<Transform>)>,
-    mesh_alternates: Query<(Entity, &Handle<Mesh>, &Transform, &TerrainMeshAlternates)>,
+    camera_query: Query<&GlobalTransform, (With<Camera>, Changed<GlobalTransform>)>,
+    mesh_alternates: Query<(Entity, &Handle<Mesh>, &GlobalTransform, &TerrainMeshAlternates)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
@@ -103,9 +103,8 @@ pub fn swap_mesh_alternates(
 
     let Ok(camera_transform) = camera_query.get_single() else { return };
 
-    for (entity, current, transform, alternates) in mesh_alternates.iter() {
-
-        let dist = transform.translation.distance(camera_transform.translation);
+    for (entity, current, mesh_transform, alternates) in mesh_alternates.iter() {
+        let dist = mesh_transform.translation().distance(camera_transform.translation());
 
         let diff = dist - alternates.cutoff;
 
