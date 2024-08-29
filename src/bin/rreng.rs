@@ -7,7 +7,9 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rreng::*;
 
 fn main() {
-    App::new()
+    let mut app = App::new();
+
+    app
         .add_plugins(DefaultPlugins)
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(camera::CameraPlugin::default())
@@ -16,7 +18,11 @@ fn main() {
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)
         .add_systems(Startup, utils::show_help_text)
-        .add_systems(Update, utils::close_on_esc)
-        .add_plugins(WorldInspectorPlugin::new())
-        .run();
+        .add_plugins(WorldInspectorPlugin::new());
+
+
+    #[cfg(not(target_arch = "wasm32"))]
+    app.add_systems(Update, utils::close_on_esc);
+
+    app.run();
 }
