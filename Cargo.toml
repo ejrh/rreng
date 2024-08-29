@@ -22,6 +22,7 @@ features = [
     "bevy_winit",
     "bevy_core_pipeline",
     "bevy_asset",
+    "bevy_state",
     "bevy_render",
     "bevy_pbr",
     "bevy_ui",
