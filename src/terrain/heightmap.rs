@@ -8,7 +8,7 @@ pub fn heightmap_to_mesh(heights: &Vec<Vec<f32>>, scale: &Vec3) -> Mesh {
     let height = heights.len();
     let width = heights[0].len();
 
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::RENDER_WORLD);
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
     let mut verts = Vec::new();
     let mut cols = Vec::new();
     for i in 0..height {

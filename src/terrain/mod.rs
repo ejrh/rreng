@@ -1,12 +1,14 @@
 use bevy::prelude::*;
+use bevy_mod_raycast::prelude::CursorRayPlugin;
 
-pub mod datafile;
-pub mod loading;
-pub mod heightmap;
-pub mod terrain;
 pub mod creation;
-pub mod utils;
+pub mod datafile;
+pub mod heightmap;
+pub mod loading;
 pub mod rendering;
+pub mod selection;
+pub mod terrain;
+pub mod utils;
 
 /**
  * The terrain is set of elevation data for a fixed area.
@@ -40,6 +42,10 @@ impl Plugin for TerrainPlugin {
             .add_systems(Update, loading::datafile_loaded)
             .add_systems(Update, loading::elevation_loaded)
             .add_systems(Update, rendering::update_meshes)
-            .add_systems(Update, rendering::swap_mesh_alternates);
+            .add_systems(Update, rendering::swap_mesh_alternates)
+            .add_plugins(CursorRayPlugin)
+            .init_resource::<selection::SelectedPoint>()
+            .add_systems(Startup, selection::create_marker)
+            .add_systems(Update, selection::update_selected_point);
     }
 }

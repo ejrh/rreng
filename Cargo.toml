@@ -35,3 +35,7 @@ default-features = false
 features = [
     "bevy_render"
 ]
+
+[dependencies.bevy_mod_raycast]
+version = "0.18"
+default-features = false
