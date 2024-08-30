@@ -9,6 +9,7 @@ pub mod rendering;
 pub mod selection;
 pub mod terrain;
 pub mod utils;
+pub mod edit;
 
 /**
  * The terrain is set of elevation data for a fixed area.
@@ -46,6 +47,7 @@ impl Plugin for TerrainPlugin {
             .add_plugins(CursorRayPlugin)
             .init_resource::<selection::SelectedPoint>()
             .add_systems(Startup, selection::create_marker)
-            .add_systems(Update, selection::update_selected_point);
+            .add_systems(Update, selection::update_selected_point)
+            .add_systems(Update, edit::click_point);
     }
 }

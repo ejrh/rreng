@@ -12,6 +12,18 @@ impl Range2 {
     fn is_empty(&self) -> bool {
         self.0.is_empty() || self.1.is_empty()
     }
+
+    pub(crate) fn expand_to(&mut self, row: usize, col: usize) {
+        if self.is_empty() {
+            self.0 = row..row + 1;
+            self.1 = col..col + 1;
+        } else {
+            self.0.start = self.0.start.min(row);
+            self.0.end = self.0.end.max(row + 1);
+            self.1.start = self.1.start.min(col);
+            self.1.end = self.1.end.max(col + 1);
+        }
+    }
 }
 
 pub fn restrict_ranges(from_r: &mut Range<isize>, to_r: &mut Range<isize>, limit: isize) {

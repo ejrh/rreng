@@ -65,4 +65,12 @@ impl Terrain {
             }
         }
     }
+
+    pub fn dirty_range(&mut self, range: Range2) {
+        for bi in self.block_info.iter_mut() {
+            if bi.range.overlaps(&range) {
+                bi.dirty = true;
+            }
+        }
+    }
 }
