@@ -39,6 +39,7 @@ impl Plugin for TerrainPlugin {
             .init_asset_loader::<datafile::DataFileLoader>()
             .init_asset::<datafile::ElevationFile>()
             .init_asset_loader::<datafile::ElevationFileLoader>()
+            .add_systems(Startup, rendering::init_render_params)
             .add_systems(Startup, loading::load_initial_terrain)
             .add_systems(Update, loading::datafile_loaded)
             .add_systems(Update, loading::elevation_loaded)

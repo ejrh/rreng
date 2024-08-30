@@ -1,11 +1,9 @@
-use bevy::color::palettes::basic::{BLUE, GREEN, RED};
 use bevy::prelude::*;
-use bevy::render::render_asset::RenderAssetUsages;
-use bevy::render::render_resource::PrimitiveTopology;
-use ndarray::{s, ArrayView};
+use ndarray::s;
 
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::terrain::Terrain;
+use crate::terrain::utils::get_copyable_range;
 
 #[derive(Component)]
 pub struct TerrainMesh {
@@ -21,11 +19,31 @@ pub struct TerrainMeshAlternates {
 
 const RENDERS_PER_FRAME: usize = 1;
 
+#[derive(Resource)]
+pub struct TerrainRenderParams {
+    grass_material: Handle<StandardMaterial>,
+    high_res_cutoff: f32,
+}
+
+pub fn init_render_params(
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,
+) {
+    let mut grass_material = StandardMaterial::from(Color::srgb(0.3, 0.6, 0.2));
+    grass_material.perceptual_roughness = 0.75;
+    grass_material.reflectance = 0.25;
+    let params = TerrainRenderParams {
+        grass_material: materials.add(grass_material),
+        high_res_cutoff: 1000.0,
+    };
+    commands.insert_resource(params);
+}
+
 pub fn update_meshes(
     mut terrain: ResMut<Terrain>,
+    params: Res<TerrainRenderParams>,
     terrain_meshes: Query<(Entity, &TerrainMesh)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
     /* Explicitly borrow the object so we can simultaneously borrow different fields  of it later */
@@ -56,11 +74,6 @@ pub fn update_meshes(
             meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32)))
         };
 
-        let colour = if block_info.block_num.0 + block_info.block_num.1 == 0 { RED }
-        else if (block_info.block_num.0 + block_info.block_num.1) & 1 == 0 { GREEN }
-        else { BLUE };
-        let material = materials.add(create_material(Color::Srgba(colour)));
-
         let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
         let yp = block_info.block_num.0 as f32 * terrain.block_size as f32;
         let transform = Transform::from_xyz(xp, 0.0, yp);
@@ -68,26 +81,23 @@ pub fn update_meshes(
         let mesh = low_res.clone();
 
         let alternates = TerrainMeshAlternates {
-            cutoff: 1000.0,
+            cutoff: params.high_res_cutoff,
             high_res,
             low_res,
         };
 
         commands.entity(entity).insert(MaterialMeshBundle {
-            material,
+            material: params.grass_material.clone(),
             mesh,
             transform,
             ..default()
         }).insert(alternates);
-
-        info!("spawned terrain mesh");
     }
 
     /* Clean up orphaned terrain meshes */
     for (entity, terrain_mesh) in terrain_meshes.iter() {
         let block_info = &terrain.block_info[terrain_mesh.block_num];
         if block_info.mesh_entity != Some(entity) {
-            info!("despawn orphaned terrain mesh");
             commands.entity(entity).despawn();
         }
     }
@@ -96,7 +106,6 @@ pub fn update_meshes(
 pub fn swap_mesh_alternates(
     camera_query: Query<&GlobalTransform, (With<Camera>, Changed<GlobalTransform>)>,
     mesh_alternates: Query<(Entity, &Handle<Mesh>, &GlobalTransform, &TerrainMeshAlternates)>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
     const TOLERANCE: f32 = 50.0;
@@ -108,10 +117,10 @@ pub fn swap_mesh_alternates(
 
         let diff = dist - alternates.cutoff;
 
-        let (preferred, colour) = if diff < 0.0 {
-            (&alternates.high_res, GREEN)
+        let preferred = if diff < 0.0 {
+            &alternates.high_res
         } else {
-            (&alternates.low_res, BLUE)
+            &alternates.low_res
         };
 
         if !current.eq(preferred) {
@@ -119,8 +128,7 @@ pub fn swap_mesh_alternates(
                 continue;
             }
 
-            let material = materials.add(create_material(Color::Srgba(colour)));
-            commands.entity(entity).insert((preferred.clone(), material));
+            commands.entity(entity).insert(preferred.clone());
         }
     }
 }
@@ -138,8 +146,4 @@ fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3) -> Mesh {
     let mesh = heightmap_to_mesh(&heights, scale);
 
     mesh
-}
-
-fn create_material(colour: Color) -> StandardMaterial {
-    StandardMaterial::from(colour)
 }
