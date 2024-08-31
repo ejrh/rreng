@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
+
 use bevy::input::ButtonInput;
-use bevy::input::mouse::MouseButtonInput;
-use bevy::log::info;
 use bevy::prelude::{MouseButton, Res, ResMut};
 use ndarray::{Array2, Ix};
 
@@ -11,10 +10,13 @@ use crate::terrain::utils::Range2;
 
 pub fn click_point(
     buttons: Res<ButtonInput<MouseButton>>,
-    mut selected_point: Res<SelectedPoint>,
+    selected_point: Res<SelectedPoint>,
     mut terrain: ResMut<Terrain>,
 ) {
-    if !buttons.pressed(MouseButton::Left) { return; }
+    let left = buttons.pressed(MouseButton::Left);
+    let right = buttons.pressed(MouseButton::Right);
+
+    if !left && !right { return; }
 
     let row = selected_point.point.z as Ix;
     let col = selected_point.point.x as Ix;
@@ -23,7 +25,9 @@ pub fn click_point(
         return;
     }
 
-    terrain.elevation[(row, col)] += 1.0;
+    if left && !right { terrain.elevation[(row, col)] += 1.0; }
+    if right && !left { terrain.elevation[(row, col)] -= 1.0; }
+
     let range = propagate(row, col, &mut terrain.elevation);
 
     terrain.dirty_range(range);
@@ -44,9 +48,13 @@ fn propagate(crow: Ix, ccol: Ix, data: &mut Array2<f32>) -> Range2 {
         for (nrow, ncol) in neighbours(row, col, data.dim()) {
             let dist = ((nrow.abs_diff(crow) * nrow.abs_diff(crow) + ncol.abs_diff(ccol) * ncol.abs_diff(ccol)) as f32).sqrt();
             let min_h = data[(row, col)].min(cheight - dist);
+            let max_h = data[(row, col)].max(cheight + dist);
 
             if data[(nrow, ncol)] < min_h {
                 data[(nrow, ncol)] = min_h;
+                queue.push_back((nrow, ncol));
+            } else if data[(nrow, ncol)] > max_h {
+                data[(nrow, ncol)] = max_h;
                 queue.push_back((nrow, ncol));
             }
         }
