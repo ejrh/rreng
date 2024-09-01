@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use bevy::input::ButtonInput;
-use bevy::prelude::{MouseButton, Res, ResMut};
+use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
 use ndarray::{Array2, Ix};
 
 use crate::terrain::selection::SelectedPoint;
@@ -31,6 +31,52 @@ pub fn click_point(
     let range = propagate(row, col, &mut terrain.elevation);
 
     terrain.dirty_range(range);
+}
+
+pub fn drag_point(
+    buttons: Res<ButtonInput<MouseButton>>,
+    selected_point: Res<SelectedPoint>,
+    mut terrain: ResMut<Terrain>,
+    mut start_point: Local<SelectedPoint>,
+    mut gizmos: Gizmos,
+) {
+    if buttons.just_pressed(MouseButton::Left) {
+        start_point.point = selected_point.point;
+    }
+
+    if buttons.pressed(MouseButton::Left) {
+        gizmos.arrow(start_point.point, selected_point.point, Color::srgb(1.0, 0.1, 0.1));
+    } else if buttons.just_released(MouseButton::Left) {
+        let row = start_point.point.z as Ix;
+        let col = start_point.point.x as Ix;
+
+        if row < 0 || col < 0 || row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+            return;
+        }
+
+        let start_h = terrain.elevation[(row, col)];
+
+        let row = selected_point.point.z as Ix;
+        let col = selected_point.point.x as Ix;
+
+        if row < 0 || col < 0 || row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+            return;
+        }
+
+        let dist = selected_point.point.distance(start_point.point);
+        for i in 1..= dist as usize {
+            let point = start_point.point.lerp(selected_point.point, i as f32 / dist);
+
+            let row = point.z as Ix;
+            let col = point.x as Ix;
+
+            terrain.elevation[(row, col)] = start_h;
+
+            let range = propagate(row, col, &mut terrain.elevation);
+
+            terrain.dirty_range(range);
+        }
+    }
 }
 
 fn propagate(crow: Ix, ccol: Ix, data: &mut Array2<f32>) -> Range2 {
