@@ -40,3 +40,9 @@ features = [
 [dependencies.bevy_mod_raycast]
 version = "0.18"
 default-features = false
+
+[profile.release]
+opt-level = 'z'
+lto = true
+panic = 'abort'
+strip = true
