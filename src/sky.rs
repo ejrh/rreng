@@ -32,7 +32,7 @@ fn create_lights(
 ) {
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
-        brightness: 0.02,
+        brightness: 50.0,
     });
 
     commands
