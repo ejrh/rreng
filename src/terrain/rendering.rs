@@ -1,9 +1,11 @@
 use bevy::prelude::*;
+use bevy::render::mesh::PrimitiveTopology;
+use bevy::render::render_asset::RenderAssetUsages;
 use ndarray::s;
 
 use crate::terrain::heightmap::heightmap_to_mesh;
+use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
 use crate::terrain::terrain::Terrain;
-use crate::terrain::utils::get_copyable_range;
 
 #[derive(Component)]
 pub struct TerrainMesh {
@@ -63,15 +65,17 @@ pub fn update_meshes(
         });
 
         let high_res = {
+            let threshold = 0.1;
             let spacing = 1;
             let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
-            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32)))
+            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
         };
 
         let low_res = {
-            let spacing = 4;
+            let threshold = 0.5;
+            let spacing = 1;
             let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
-            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32)))
+            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
         };
 
         let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
@@ -133,17 +137,33 @@ pub fn swap_mesh_alternates(
     }
 }
 
-fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3) -> Mesh {
-    let mut heights = Vec::new();
-    for row in data.rows() {
-        let mut height_row = Vec::new();
-        for x in row {
-            height_row.push(*x);
+fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> Mesh {
+    if threshold == 0.0 {
+        let mut heights = Vec::new();
+        for row in data.rows() {
+            let mut height_row = Vec::new();
+            for x in row {
+                height_row.push(*x);
+            }
+            heights.push(height_row);
         }
-        heights.push(height_row);
+
+        let mesh = heightmap_to_mesh(&heights, scale);
+        mesh
+    } else {
+        let Triangulation { triangles } = triangulate_rtin(&data, threshold);
+
+        let mut pos  = Vec::new();
+        for Triangle { points } in &triangles {
+            let p = points.map(|[r,c]| {
+                let h = data[(r, c)];
+                Vec3::new(c as f32 * scale.x, h, r as f32  * scale.y)
+            });
+            pos.extend(p);
+        }
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, pos);
+        mesh.compute_flat_normals();
+        mesh
     }
-
-    let mesh = heightmap_to_mesh(&heights, scale);
-
-    mesh
 }

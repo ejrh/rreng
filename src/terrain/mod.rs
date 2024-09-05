@@ -3,13 +3,14 @@ use bevy_mod_raycast::prelude::CursorRayPlugin;
 
 pub mod creation;
 pub mod datafile;
+pub mod edit;
 pub mod heightmap;
 pub mod loading;
 pub mod rendering;
+pub mod rtin;
 pub mod selection;
 pub mod terrain;
 pub mod utils;
-pub mod edit;
 
 /**
  * The terrain is set of elevation data for a fixed area.
