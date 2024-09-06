@@ -73,4 +73,15 @@ impl Terrain {
             }
         }
     }
+
+    pub fn elevation_at(&self, point: Vec2) -> f32 {
+        let r = point.y as usize;
+        let c = point.x as usize;
+
+        if r >= 0 && c >= 0 && r < self.elevation.dim().0 && c < self.elevation.dim().1 {
+            self.elevation[(r, c)]
+        } else {
+            -1.0
+        }
+    }
 }

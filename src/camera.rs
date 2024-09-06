@@ -3,6 +3,7 @@ use std::ops::Range;
 use bevy::color::palettes::basic::GRAY;
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::prelude::*;
+use crate::terrain::terrain::Terrain;
 
 #[derive(Default)]
 pub struct CameraPlugin {
@@ -108,15 +109,18 @@ fn camera_movement(time: Res<Time>,
 
 fn update_camera_position(
     mut query: Query<(&CameraState, &mut Transform), Changed<CameraState>>,
-    mut text_query: Query<&mut Text, With<CameraPositionLabel>>
+    mut text_query: Query<&mut Text, With<CameraPositionLabel>>,
+    terrain: Res<Terrain>,
 ) {
     let Ok((state, mut transform)) = query.get_single_mut()
-        else { return; };
+    else { return; };
 
     transform.rotation = Quat::from_axis_angle(Vec3::Y, state.yaw)
         * Quat::from_axis_angle(Vec3::X, state.pitch);
     let up_to_camera = transform.rotation.mul_vec3(Vec3::Z);
-    transform.translation = state.focus + state.distance * up_to_camera;
+    let mut focus = state.focus;
+    focus.y = terrain.elevation_at(focus.xz());
+    transform.translation = focus + state.distance * up_to_camera;
 
     /* Update position text if it exists */
     if let Ok(mut text) = text_query.get_single_mut() {
