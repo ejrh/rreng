@@ -96,9 +96,10 @@ pub fn decode_elevation(bytes: &[u8]) -> std::io::Result<ElevationFile> {
 
     let mut data = ndarray::Array2::zeros((height, width));
 
-    for i in 0..height {
-        for j in 0..width {
-            data[(i, j)] = raw_data[i * width + j];
+    for (r, chunk) in raw_data.chunks_exact(width).enumerate() {
+        let mut row_view = data.row_mut(r);
+        if let Some(dest) = row_view.as_slice_mut() {
+            dest.copy_from_slice(chunk);
         }
     }
 
