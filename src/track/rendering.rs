@@ -69,16 +69,18 @@ fn create_rail_mesh(params: &TrackRenderParams, length: f32, open_start: bool, o
     mesh.merge(&open_extrusion(&rail_profile.vertices, length).translated_by(-lateral_step));
 
     if !open_start {
-        mesh.merge(&polygon(&rail_profile.vertices).translated_by(lateral_step));
-        mesh.merge(&polygon(&rail_profile.vertices).translated_by(-lateral_step));
-    }
-    if !open_end {
         mesh.merge(&polygon(&rail_profile.vertices)
             .rotated_by(Quat::from_axis_angle(Vec3::Y, TAU/2.0))
-            .translated_by(Vec3::new(0.0, 0.0, length))
             .translated_by(lateral_step));
         mesh.merge(&polygon(&rail_profile.vertices)
             .rotated_by(Quat::from_axis_angle(Vec3::Y, TAU/2.0))
+            .translated_by(-lateral_step));
+    }
+    if !open_end {
+        mesh.merge(&polygon(&rail_profile.vertices)
+            .translated_by(Vec3::new(0.0, 0.0, length))
+            .translated_by(lateral_step));
+        mesh.merge(&polygon(&rail_profile.vertices)
             .translated_by(Vec3::new(0.0, 0.0, length))
             .translated_by(-lateral_step));
     }
@@ -131,19 +133,6 @@ fn polygon(profile: &[Vec2]) -> Mesh {
 
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, tris);
     mesh.compute_flat_normals();
-
-    // if let Ok(tri) = triangulation_from_2d_vertices(&vertices, config) {
-    //     let tris: Vec<_> = tri.triangles.iter()
-    //         .flat_map(|x| x.iter().map(|vid| {
-    //             let pt = profile[*vid as usize];
-    //             Vec3::new(pt.x, pt.y, 0.0)
-    //         }))
-    //         .collect();
-    //     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, tris);
-    //     mesh.compute_flat_normals();
-    // } else {
-    //     error!("Couldn't triangulate polygon at end of rail");
-    // }
 
     mesh
 }
