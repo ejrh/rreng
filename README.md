@@ -8,10 +8,18 @@ Controls
 
 Moving around:
 
-    WASD - Move
-    QE - Rotate 
-    ZX - Zoom
+    WASD    - Move
+    QE      - Rotate 
+    ZX      - Zoom
+    PgUp/Dn - Pitch
+
+Editing:
+
+    Left click  - Raise
+    Right click - Lower
+    Drag        - Flatten
 
 Other:
 
-    F5 - Toggle debug mode
+    F5  - Toggle debug mode
+    ESC - Exit (except in web mode)
