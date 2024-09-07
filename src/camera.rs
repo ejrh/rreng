@@ -37,7 +37,7 @@ impl Default for CameraState {
             pitch: -TAU/8.0,
             distance: 1000.0,
             focus_range: Vec3::new(0.0, 0.0, 0.0)..Vec3::new(8.0 * 480.0, 100.0, 3.0 * 720.0),
-            distance_range: 10.0..2000.0,
+            distance_range: 1.0..2000.0,
         }
     }
 }
