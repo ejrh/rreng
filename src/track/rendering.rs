@@ -17,6 +17,9 @@ const RENDERS_PER_FRAME: usize = 1;
 pub struct TrackRenderParams {
     rail_material: Handle<StandardMaterial>,
     rail_profile: Vec<Vec2>,
+    sleeper_material: Handle<StandardMaterial>,
+    sleeper_dims: Vec3,
+    sleeper_spacing: f32,
 }
 
 pub fn init_render_params(
@@ -31,9 +34,18 @@ pub fn init_render_params(
     let rail_points = rail_points_half.iter().copied().chain(rail_points_otherhalf);
     let rail_profile = rail_points.map(|(x, y)| Vec2::new(x * 0.01, y * 0.01));
 
+    let mut sleeper_material = StandardMaterial::from(Color::srgb(0.5, 0.25, 0.1));
+    sleeper_material.perceptual_roughness = 0.7;;
+
+    let sleeper_dims = Vec3::new(1.8, 0.15, 0.2);
+    let sleeper_spacing = 0.7;
+
     let params = TrackRenderParams {
         rail_material: materials.add(rail_material),
         rail_profile: rail_profile.collect(),
+        sleeper_material: materials.add(sleeper_material),
+        sleeper_dims,
+        sleeper_spacing,
     };
     commands.insert_resource(params);
 }
@@ -48,13 +60,24 @@ pub fn update_track_meshes(
         commands.entity(segment_id).despawn_descendants();
 
         let rail_mesh = create_rail_mesh(&params, segment.length, false, false);
-
         commands.spawn(MaterialMeshBundle {
             mesh: meshes.add(rail_mesh),
             material: params.rail_material.clone(),
-            transform: transform.clone(),
             ..default()
-        });
+        }).set_parent(segment_id);
+
+        let num_sleepers = f32::round(segment.length / params.sleeper_spacing) as usize;
+        let sleeper_offset = segment.length / (num_sleepers as f32);
+        for i in 0..num_sleepers {
+            let sleeper_mesh = Cuboid::from_size(params.sleeper_dims);
+            let sleeper_transform = Transform::from_xyz(0.0, -params.sleeper_dims.y/2.0, sleeper_offset * (i as f32 + 0.5));
+            commands.spawn(MaterialMeshBundle {
+                mesh: meshes.add(sleeper_mesh.mesh()),
+                material: params.sleeper_material.clone(),
+                transform: sleeper_transform,
+                ..default()
+            }).set_parent(segment_id);
+        }
     }
 }
 

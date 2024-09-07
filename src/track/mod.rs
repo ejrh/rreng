@@ -1,6 +1,7 @@
 use bevy::{
     prelude::*,
 };
+use bevy::ui::ZIndex::Global;
 
 pub mod rendering;
 
@@ -25,15 +26,17 @@ pub fn create_track(
 ) {
     let x = 480.0;
     let z = 1770.0;
-    let y = 216.0;
+    let y = 216.5;
 
     let length = 19.46;
 
     commands
         .spawn(Segment { length })
-        .insert(Transform::from_xyz(x, y, z - length/2.0));
+        .insert(TransformBundle::from(Transform::from_xyz(x, y, z - length/2.0)))
+        .insert(VisibilityBundle::default());
 
     commands
         .spawn(Segment { length: 10.0 })
-        .insert(Transform::from_rotation(Quat::from_axis_angle(Vec3::Y, 175.0f32.to_radians())).with_translation(Vec3::new(x, y, z - length/2.0)));
+        .insert(TransformBundle::from(Transform::from_rotation(Quat::from_axis_angle(Vec3::Y, 175.0f32.to_radians())).with_translation(Vec3::new(x, y, z - length/2.0))))
+        .insert(VisibilityBundle::default());
 }

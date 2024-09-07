@@ -8,7 +8,7 @@ pub fn create_train(
 ) {
     let x = 480.0;
     let z = 1770.0;
-    let y = 216.0;
+    let y = 216.5;
     let point = Vec3::new(x, y + 0.15, z);
 
     let angle = Quat::from_axis_angle(Vec3::Y, (54.0f32).to_radians());
