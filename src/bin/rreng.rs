@@ -37,5 +37,7 @@ fn main() {
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, utils::close_on_esc);
 
+    app.add_systems(Startup, train::create_train);
+
     app.run();
 }
