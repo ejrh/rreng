@@ -51,7 +51,7 @@ pub fn show_help_text(
         color: Color::Srgba(GRAY),
     };
 
-    const HELP_STR: &str = "Controls: WASD move, QE rotate, ZX zoom";
+    const HELP_STR: &str = "Controls: WASD move, QE rotate, ZX zoom, PgUp/Dn pitch";
 
     commands.spawn(TextBundle::from_section(HELP_STR, text_style)
         .with_style(Style {

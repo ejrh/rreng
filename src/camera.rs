@@ -1,8 +1,12 @@
 use std::f32::consts::TAU;
 use std::ops::Range;
-use bevy::color::palettes::basic::GRAY;
-use bevy::core_pipeline::tonemapping::Tonemapping;
-use bevy::prelude::*;
+
+use bevy::{
+    color::palettes::basic::GRAY,
+    core_pipeline::tonemapping::Tonemapping,
+    prelude::*,
+};
+
 use crate::terrain::terrain::Terrain;
 
 #[derive(Default)]
@@ -12,11 +16,11 @@ pub struct CameraPlugin {
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_systems(Startup, create_camera)
-        .add_systems(Startup, create_camera_position_text)
-        .add_systems(Update, camera_movement)
-        .add_systems(Update, update_camera_position);
-   }
+            .add_systems(Startup, create_camera)
+            .add_systems(Startup, create_camera_position_text)
+            .add_systems(Update, camera_movement)
+            .add_systems(Update, update_camera_position);
+    }
 }
 
 #[derive(Component)]
@@ -26,6 +30,7 @@ struct CameraState {
     pitch: f32,
     distance: f32,
     focus_range: Range<Vec3>,
+    pitch_range: Range<f32>,
     distance_range: Range<f32>,
 }
 
@@ -36,7 +41,8 @@ impl Default for CameraState {
             yaw: Default::default(),
             pitch: -TAU/8.0,
             distance: 1000.0,
-            focus_range: Vec3::new(0.0, 0.0, 0.0)..Vec3::new(8.0 * 480.0, 100.0, 3.0 * 720.0),
+            focus_range: Vec3::new(0.0, 0.0, 0.0)..Vec3::new(8.0 * 480.0, 1000.0, 3.0 * 720.0),
+            pitch_range: -TAU/4.0..TAU/4.0,
             distance_range: 1.0..2000.0,
         }
     }
@@ -53,13 +59,14 @@ fn create_camera(mut commands: Commands) {
 }
 
 fn camera_movement(time: Res<Time>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut CameraState, &mut Transform)>
+                   keyboard_input: Res<ButtonInput<KeyCode>>,
+                   mut query: Query<(&mut CameraState, &mut Transform)>
 ) {
     let (mut state, transform) = query.single_mut();
 
     let mut movement_delta = Vec3::ZERO;
     let mut yaw_delta = 0.0;
+    let mut pitch_delta = 0.0;
     let mut distance_delta: f32 = 0.0;
     if keyboard_input.pressed(KeyCode::KeyW) {
         movement_delta.z -= 1.0;
@@ -79,6 +86,12 @@ fn camera_movement(time: Res<Time>,
     if keyboard_input.pressed(KeyCode::KeyE) {
         yaw_delta -= TAU/8.0;
     }
+    if keyboard_input.pressed(KeyCode::PageUp) {
+        pitch_delta -= 1.0;
+    }
+    if keyboard_input.pressed(KeyCode::PageDown) {
+        pitch_delta += 1.0;
+    }
     if keyboard_input.pressed(KeyCode::KeyZ) {
         distance_delta -= 1.0;
     }
@@ -86,7 +99,7 @@ fn camera_movement(time: Res<Time>,
         distance_delta += 1.0;
     }
 
-    if yaw_delta == 0.0 && movement_delta == Vec3::ZERO && distance_delta == 0.0 { return; }
+    if yaw_delta == 0.0 && pitch_delta == 0.0 && movement_delta == Vec3::ZERO && distance_delta == 0.0 { return; }
 
     if movement_delta != Vec3::ZERO {
         let movement_delta = transform.rotation.mul_vec3(movement_delta);
@@ -99,6 +112,9 @@ fn camera_movement(time: Res<Time>,
     state.yaw += yaw_delta * time.delta_seconds();
     if state.yaw < 0.0 { state.yaw += TAU; }
     else if state.yaw >= TAU { state.yaw -= TAU; }
+
+    state.pitch += pitch_delta * time.delta_seconds();
+    state.pitch = state.pitch.clamp(state.pitch_range.start, state.pitch_range.end);
 
     if distance_delta != 0.0 {
         state.distance *= 2.0f32.powf(distance_delta * time.delta_seconds());
@@ -124,8 +140,8 @@ fn update_camera_position(
 
     /* Update position text if it exists */
     if let Ok(mut text) = text_query.get_single_mut() {
-        text.sections[0].value = format!("Camera: focus {:3.0}, {:3.0}; yaw {:3.0}",
-                                         state.focus.z, state.focus.x, state.yaw.to_degrees());
+        text.sections[0].value = format!("Camera: focus {:3.0}, {:3.0}; yaw {:3.0}; pitch {:3.0}",
+                                         state.focus.z, state.focus.x, state.yaw.to_degrees(), state.pitch.to_degrees());
     }
 }
 
