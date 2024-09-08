@@ -5,8 +5,15 @@ use bevy::ui::ZIndex::Global;
 
 pub mod rendering;
 
+/**
+ * Height of rail surface above ground level.
+ * Trains sit at this level; rails, sleepers, and bed are rendered below it down to ground level.
+ * Note that rail sections and their control points sit at ground level.
+ */
+pub const TRACK_HEIGHT: f32 = 0.5;
+
 #[derive(Component)]
-struct Segment {
+pub struct Segment {
     length: f32,
 }
 
@@ -26,10 +33,9 @@ pub fn create_track(
 ) {
     let x = 480.0;
     let z = 1770.0;
-    let y = 216.5;
+    let y = 216.0;
 
     let length = 19.46;
-
     commands
         .spawn(Segment { length })
         .insert(TransformBundle::from(Transform::from_xyz(x, y, z - length/2.0)))

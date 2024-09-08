@@ -11,15 +11,25 @@ use crate::terrain::terrain::Terrain;
 use crate::terrain::utils::get_copyable_range;
 use crate::track::Segment;
 
-const RENDERS_PER_FRAME: usize = 1;
-
+/**
+ * Tracks are rendered with:
+ *    - rail height
+ *    - sleeper height
+ *    - bed height
+ * filling up the space between ground level and RAIL_HEIGHT.
+ * The bed height is expanded below ground level to fully occupy dips in the terrain.
+ */
 #[derive(Resource)]
 pub struct TrackRenderParams {
     rail_material: Handle<StandardMaterial>,
+    rail_height: f32,
     rail_profile: Vec<Vec2>,
     sleeper_material: Handle<StandardMaterial>,
     sleeper_dims: Vec3,
+    sleeper_height: f32,
     sleeper_spacing: f32,
+    bed_material: Handle<StandardMaterial>,
+    bed_profile: Vec<Vec2>,
 }
 
 pub fn init_render_params(
@@ -34,18 +44,33 @@ pub fn init_render_params(
     let rail_points = rail_points_half.iter().copied().chain(rail_points_otherhalf);
     let rail_profile = rail_points.map(|(x, y)| Vec2::new(x * 0.01, y * 0.01));
 
-    let mut sleeper_material = StandardMaterial::from(Color::srgb(0.5, 0.25, 0.1));
-    sleeper_material.perceptual_roughness = 0.7;;
+    let rail_height = 0.2 + 0.15;
 
-    let sleeper_dims = Vec3::new(1.8, 0.15, 0.2);
+    let mut sleeper_material = StandardMaterial::from(Color::srgb(0.5, 0.25, 0.1));
+    sleeper_material.perceptual_roughness = 0.7;
+
+    let sleeper_dims = Vec3::new(2.0, 0.15, 0.2);
+    let sleeper_height = 0.2;
     let sleeper_spacing = 0.7;
+
+    let mut bed_material = StandardMaterial::from(Color::srgb(0.6, 0.6, 0.5));
+    bed_material.perceptual_roughness = 0.5;
+
+    let bed_points_half = [(-2.5, -0.3), (-1.5, 0.2)];
+    let bed_points_otherhalf = bed_points_half.iter().rev().map(|(x, y)| (-x, *y));
+    let bed_points = bed_points_half.iter().copied().chain(bed_points_otherhalf);
+    let bed_profile = bed_points.map(|(x, y)| Vec2::new(x, y));
 
     let params = TrackRenderParams {
         rail_material: materials.add(rail_material),
         rail_profile: rail_profile.collect(),
+        rail_height,
         sleeper_material: materials.add(sleeper_material),
         sleeper_dims,
+        sleeper_height,
         sleeper_spacing,
+        bed_material: materials.add(bed_material),
+        bed_profile: bed_profile.collect(),
     };
     commands.insert_resource(params);
 }
@@ -70,7 +95,7 @@ pub fn update_track_meshes(
         let sleeper_offset = segment.length / (num_sleepers as f32);
         for i in 0..num_sleepers {
             let sleeper_mesh = Cuboid::from_size(params.sleeper_dims);
-            let sleeper_transform = Transform::from_xyz(0.0, -params.sleeper_dims.y/2.0, sleeper_offset * (i as f32 + 0.5));
+            let sleeper_transform = Transform::from_xyz(0.0, params.sleeper_height + params.sleeper_dims.y/2.0, sleeper_offset * (i as f32 + 0.5));
             commands.spawn(MaterialMeshBundle {
                 mesh: meshes.add(sleeper_mesh.mesh()),
                 material: params.sleeper_material.clone(),
@@ -78,6 +103,13 @@ pub fn update_track_meshes(
                 ..default()
             }).set_parent(segment_id);
         }
+
+        let bed_mesh = create_bed_mesh(&params, segment.length, false, false);
+        commands.spawn(MaterialMeshBundle {
+            mesh: meshes.add(bed_mesh),
+            material: params.bed_material.clone(),
+            ..default()
+        }).set_parent(segment_id);
     }
 }
 
@@ -107,6 +139,8 @@ fn create_rail_mesh(params: &TrackRenderParams, length: f32, open_start: bool, o
             .translated_by(Vec3::new(0.0, 0.0, length))
             .translated_by(-lateral_step));
     }
+
+    mesh.translate_by(Vec3::new(0.0, params.rail_height, 0.0));
 
     mesh
 }
@@ -156,6 +190,22 @@ fn polygon(profile: &[Vec2]) -> Mesh {
 
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, tris);
     mesh.compute_flat_normals();
+
+    mesh
+}
+
+fn create_bed_mesh(params: &TrackRenderParams, length: f32, open_start: bool, open_end: bool) -> Mesh {
+    let bed_profile = BoxedPolyline2d::new(params.bed_profile.clone());
+    let mut mesh = open_extrusion(&bed_profile.vertices, length);
+
+    if !open_start {
+        mesh.merge(&polygon(&bed_profile.vertices)
+            .rotated_by(Quat::from_axis_angle(Vec3::Y, TAU/2.0)));
+    }
+    if !open_end {
+        mesh.merge(&polygon(&bed_profile.vertices)
+            .translated_by(Vec3::new(0.0, 0.0, length)));
+    }
 
     mesh
 }
