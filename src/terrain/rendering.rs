@@ -23,18 +23,28 @@ const RENDERS_PER_FRAME: usize = 1;
 
 #[derive(Resource)]
 pub struct TerrainRenderParams {
+    parent_id: Entity,
     grass_material: Handle<StandardMaterial>,
     high_res_cutoff: f32,
 }
+
+#[derive(Component)]
+struct TerrainParent;
 
 pub fn init_render_params(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
+    let parent_id = commands
+        .spawn(TerrainParent)
+        .insert(VisibilityBundle::default())
+        .insert(TransformBundle::default()).id();
+
     let mut grass_material = StandardMaterial::from(Color::srgb(0.3, 0.6, 0.2));
     grass_material.perceptual_roughness = 0.75;
     grass_material.reflectance = 0.25;
     let params = TerrainRenderParams {
+        parent_id,
         grass_material: materials.add(grass_material),
         high_res_cutoff: 1000.0,
     };
@@ -59,7 +69,10 @@ pub fn update_meshes(
         let entity = block_info.mesh_entity
             .filter(|e| terrain_meshes.contains(*e))
             .unwrap_or_else(|| {
-            let entity = commands.spawn(TerrainMesh { block_num: block_info.block_num }).id();
+            let entity = commands
+                .spawn(TerrainMesh { block_num: block_info.block_num })
+                .set_parent(params.parent_id)
+                .id();
             block_info.mesh_entity = Some(entity);
             entity
         });
