@@ -19,7 +19,7 @@ pub struct TerrainMeshAlternates {
     low_res: Handle<Mesh>,
 }
 
-const RENDERS_PER_FRAME: usize = 1;
+const RENDERS_PER_FRAME: usize = 10;
 
 #[derive(Resource)]
 pub struct TerrainRenderParams {

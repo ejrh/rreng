@@ -67,11 +67,14 @@ impl Terrain {
     }
 
     pub fn dirty_range(&mut self, range: Range2) {
+        let mut c = 0;
         for bi in self.block_info.iter_mut() {
             if bi.range.overlaps(&range) {
+                c += 1;
                 bi.dirty = true;
             }
         }
+        info!("dirtied {c} blocks");
     }
 
     pub fn elevation_at(&self, point: Vec2) -> f32 {
