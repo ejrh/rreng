@@ -2,9 +2,7 @@ name: Web GUI
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "wip" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -26,6 +24,12 @@ jobs:
           rustup target add wasm32-unknown-unknown || true
           cargo install wasm-bindgen-cli || true
 
+      - name: Set version extra
+        run: |
+          export DATEPART=`date +%Y.%m.%d`
+          export GITPART=`git rev-parse --short HEAD`
+          echo "RRENG_VERSION_EXTRA=-wip-$DATEPART-$GITPART" >> $GITHUB_ENV
+
       - name: Build
         run: cargo build --release --target wasm32-unknown-unknown
 
@@ -42,7 +46,6 @@ jobs:
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/master'
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
           publish_dir: wasm/target

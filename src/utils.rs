@@ -19,7 +19,9 @@ pub fn show_version(
     asset_server: Res<AssetServer>,
 ) {
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    let version_str = format!("RRENG version {VERSION}");
+    const EXTRA: Option<&'static str> = option_env!("RRENG_VERSION_EXTRA");
+    let extra = EXTRA.unwrap_or_default();
+    let version_str = format!("RRENG version {VERSION}{extra}");
 
     let font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
