@@ -29,6 +29,7 @@ features = [
     "bevy_pbr",
     "bevy_gizmos",
     "bevy_ui",
+    "multi_threaded",
     "png",
     "webgl2"
 ]
