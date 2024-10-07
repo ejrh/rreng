@@ -1,8 +1,10 @@
+use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
 use bevy_mod_raycast::cursor::CursorRay;
 use bevy_mod_raycast::immediate::{Raycast, RaycastSettings};
 
 use crate::terrain::rendering::TerrainMesh;
+use crate::utils::ConstantApparentSize;
 
 #[derive(Default, Resource)]
 pub struct SelectedPoint {
@@ -17,14 +19,20 @@ pub fn create_marker(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
-    let mesh: Mesh = Sphere::new(5.0).into();
+    let mesh: Mesh = Sphere::new(2.0).into();
     let mut material = StandardMaterial::from_color(Color::srgb(1.0, 0.5, 0.5));
     material.emissive = LinearRgba::rgb(1.0, 0.5, 0.5);
-    commands.spawn(MaterialMeshBundle {
-        mesh: meshes.add(mesh),
-        material: materials.add(material),
-        ..default()
-    }).insert(SelectionMarker);
+    commands.spawn((
+        MaterialMeshBundle {
+            mesh: meshes.add(mesh),
+            material: materials.add(material),
+            ..default()
+        },
+        SelectionMarker,
+        ConstantApparentSize(100.0..250.0),
+        NotShadowCaster,
+        NotShadowReceiver,
+    ));
 }
 
 pub fn update_selected_point(

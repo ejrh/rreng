@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use bevy::color::palettes::basic::{GRAY, YELLOW};
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
@@ -78,5 +80,32 @@ pub fn close_on_esc(
         if input.just_pressed(KeyCode::Escape) {
             commands.entity(window).despawn();
         }
+    }
+}
+
+#[derive(Component)]
+pub struct ConstantApparentSize(pub Range<f32>);
+
+pub fn fix_apparent_size(
+    camera_query: Query<&GlobalTransform, With<Camera>>,
+    mut query: Query<(&mut Transform, &GlobalTransform, &ConstantApparentSize)>,
+) {
+    let Ok(camera_transform) = camera_query.get_single()
+    else { return; };
+
+    for (mut transform, global_transform, size) in query.iter_mut() {
+        let dist = camera_transform.translation().distance(global_transform.translation());
+
+        let Range { start, end } = size.0;
+
+        let scale = if dist < start {
+            dist / start
+        } else if dist > end {
+            dist / end
+        } else {
+            1.0
+        };
+
+        transform.scale = Vec3::splat(scale);
     }
 }
