@@ -1,6 +1,10 @@
-use bevy::prelude::*;
-use bevy::render::mesh::PrimitiveTopology;
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::{
+    prelude::*,
+    render::{
+        mesh::PrimitiveTopology,
+        primitives::Aabb,
+        render_asset::RenderAssetUsages
+}};
 use ndarray::s;
 
 use crate::terrain::heightmap::heightmap_to_mesh;
@@ -19,7 +23,7 @@ pub struct TerrainMeshAlternates {
     low_res: Handle<Mesh>,
 }
 
-const RENDERS_PER_FRAME: usize = 1;
+const RENDERS_PER_FRAME: usize = 10;
 
 #[derive(Resource)]
 pub struct TerrainRenderParams {
@@ -108,7 +112,7 @@ pub fn update_meshes(
             mesh,
             transform,
             ..default()
-        }).insert(alternates);
+        }).insert(alternates).remove::<Aabb>();
     }
 
     /* Clean up orphaned terrain meshes */
