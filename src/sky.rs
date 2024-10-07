@@ -10,20 +10,23 @@ pub struct SkyPlugin {
 impl Plugin for SkyPlugin {
     fn build(&self, app: &mut App) {
         app
+        .register_type::<Sun>()
         .add_systems(Startup, create_lights)
         .add_systems(Update, move_sun);
    }
 }
 
-#[derive(Component)]
+#[derive(Reflect, Component)]
 struct Sun {
-    angle: f32
+    angle: f32,
+    period: f32,
 }
 
 const SUN_RADIUS: f32 = 700.0;
 const SUN_DISTANCE: f32 = 149000.0;
 const SUN_COLOUR: Color = Color::srgb(1.0, 1.0, 0.75);
-const SECONDS_PER_DAY: f32 = 1000.0;
+const INITIAL_SUN_ANGLE: f32 = TAU/8.0;
+const SUN_PERIOD: f32 = 3600.0;
 
 fn create_lights(
     mut meshes: ResMut<Assets<Mesh>>,
@@ -36,7 +39,10 @@ fn create_lights(
     });
 
     commands
-        .spawn(Sun { angle: 0.0 })
+        .spawn(Sun {
+            angle: INITIAL_SUN_ANGLE,
+            period: SUN_PERIOD,
+        })
         .insert({
             let sun_mesh: Mesh = Sphere::new(SUN_RADIUS).into();
             let mut sun_material = StandardMaterial::from(SUN_COLOUR);
@@ -68,7 +74,7 @@ fn move_sun(
 ) {
     let (mut sun, mut transform) = sun_query.single_mut();
 
-    sun.angle += TAU/SECONDS_PER_DAY * time.delta_seconds();
+    sun.angle += TAU/sun.period * time.delta_seconds();
     transform.rotation = Quat::from_axis_angle(Vec3::Z, sun.angle);
     transform.translation = transform.rotation.mul_vec3(Vec3::new(SUN_DISTANCE, 0.0, 0.0));
 
