@@ -24,14 +24,14 @@ impl Plugin for CameraPlugin {
 }
 
 #[derive(Component)]
-struct CameraState {
+pub struct CameraState {
     focus: Vec3,
     yaw: f32,
     pitch: f32,
     distance: f32,
-    focus_range: Range<Vec3>,
+    pub focus_range: Range<Vec3>,
     pitch_range: Range<f32>,
-    distance_range: Range<f32>,
+    pub distance_range: Range<f32>,
 }
 
 impl Default for CameraState {
@@ -41,9 +41,9 @@ impl Default for CameraState {
             yaw: Default::default(),
             pitch: -TAU/8.0,
             distance: 1000.0,
-            focus_range: Vec3::new(0.0, 0.0, 0.0)..Vec3::new(8.0 * 480.0, 1000.0, 3.0 * 720.0),
+            focus_range: Vec3::ZERO..Vec3::splat(1000.0),
             pitch_range: -TAU/4.0..TAU/4.0,
-            distance_range: 1.0..2000.0,
+            distance_range: 1.0..1000.0,
         }
     }
 }
