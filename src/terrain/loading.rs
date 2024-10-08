@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
+use crate::camera::CameraState;
 use crate::terrain::datafile::{Chunk, DataFile, ElevationFile};
 use crate::terrain::terrain::Terrain;
 
@@ -74,5 +75,20 @@ pub fn elevation_loaded(
 
             terrain.set_elevation(offset, elevation_file.heights.view());
         }
+    }
+}
+
+pub fn set_camera_range(
+    terrain: Res<Terrain>,
+    mut camera_query: Query<&mut CameraState>,
+) {
+    if !terrain.is_changed() { return; }
+    let xrange = (terrain.num_blocks[1] * terrain.block_size) as f32;
+    let yrange = 1000.0;
+    let zrange = (terrain.num_blocks[0] * terrain.block_size) as f32;
+
+    if let Ok(mut camera_state) = camera_query.get_single_mut() {
+        camera_state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
+        camera_state.distance_range = 1.0..xrange.max(zrange);
     }
 }
