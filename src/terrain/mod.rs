@@ -50,8 +50,6 @@ impl Plugin for TerrainPlugin {
             .add_plugins(CursorRayPlugin)
             .init_resource::<selection::SelectedPoint>()
             .add_systems(Startup, selection::create_marker)
-            .add_systems(Update, selection::update_selected_point)
-            .add_systems(Update, edit::click_point)
-            .add_systems(Update, edit::drag_point);
+            .add_systems(Update, selection::update_selected_point);
     }
 }

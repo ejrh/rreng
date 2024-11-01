@@ -31,6 +31,7 @@ fn main() {
         .add_plugins(terrain::TerrainPlugin::default())
         .add_plugins(track::TrackPlugin)
         .add_plugins(debug::DebugPlugin::default())
+        .add_plugins(tools::ToolsPlugin)
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)
         .add_systems(Startup, utils::show_help_text)
