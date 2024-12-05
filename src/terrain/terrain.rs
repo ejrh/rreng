@@ -30,7 +30,7 @@ impl Terrain {
     pub(crate) fn reset(&mut self, datafile: &DataFile) {
         self.bounds = datafile.bounds;
         self.size = datafile.size;
-        self.block_size = 256;
+        self.block_size = 64;
         self.resolution = Vec3::new(1.0, 1.0, 1.0);
         self.num_blocks = [datafile.size[0] / self.block_size, datafile.size[1] / self.block_size];
         let point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
