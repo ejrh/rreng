@@ -17,6 +17,8 @@ pub struct BlockInfo {
 
 #[derive(Default, Debug, Resource)]
 pub struct Terrain {
+    pub bounds: Rect,
+    pub size: [usize; 2],
     pub block_size: usize,
     pub resolution: Vec3,
     pub num_blocks: [usize; 2],
@@ -26,9 +28,11 @@ pub struct Terrain {
 
 impl Terrain {
     pub(crate) fn reset(&mut self, datafile: &DataFile) {
-        self.block_size = 128;
+        self.bounds = datafile.bounds;
+        self.size = datafile.size;
+        self.block_size = 256;
         self.resolution = Vec3::new(1.0, 1.0, 1.0);
-        self.num_blocks = [30, 40];
+        self.num_blocks = [datafile.size[0] / self.block_size, datafile.size[1] / self.block_size];
         let point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
         self.elevation = ndarray::Array2::default(point_dims);
         self.block_info = ndarray::Array2::from_shape_fn(self.num_blocks, |(r, c)| BlockInfo {
@@ -48,7 +52,6 @@ impl Terrain {
         if from_rows.is_empty() || from_cols.is_empty() { return; }
 
         let data_range = Range2(to_rows.clone(), to_cols.clone());
-        info!("set_elevation {data_range:?}");
 
         let src = data.slice(s!(from_rows, from_cols));
         let mut dest = self.elevation.slice_mut(s!(to_rows, to_cols));
@@ -74,6 +77,9 @@ impl Terrain {
         }
     }
 
+    /**
+     * Point is in world space!
+     */
     pub fn elevation_at(&self, point: Vec2) -> f32 {
         let r = point.y as usize;
         let c = point.x as usize;
@@ -83,5 +89,14 @@ impl Terrain {
         } else {
             -1.0
         }
+    }
+
+    /**
+     * Coord in in coordinate system space
+     */
+    pub fn coord_to_offset(&self, coord: Vec2) -> (isize, isize) {
+        let c = coord - self.bounds.min;
+
+        (self.size[0] as isize - c.y as isize, c.x as isize)
     }
 }

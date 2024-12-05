@@ -10,6 +10,7 @@ pub mod rendering;
 pub mod rtin;
 pub mod selection;
 pub mod terrain;
+pub mod tiles;
 pub mod utils;
 
 /**
@@ -36,14 +37,18 @@ impl Plugin for TerrainPlugin {
         app
             .init_resource::<terrain::Terrain>()
             .init_resource::<loading::LoadingState>()
+            .init_asset::<tiles::TileSets>()
+            .init_asset_loader::<tiles::TileSetsLoader>()
             .init_asset::<datafile::DataFile>()
             .init_asset_loader::<datafile::DataFileLoader>()
-            .init_asset::<datafile::ElevationFile>()
-            .init_asset_loader::<datafile::ElevationFileLoader>()
+            .init_asset::<tiles::ElevationFile>()
+            .init_asset_loader::<tiles::ElevationFileLoader>()
             .add_systems(Startup, rendering::init_render_params)
             .add_systems(Startup, loading::load_initial_terrain)
+            .add_systems(Update, loading::tilesets_loaded)
             .add_systems(Update, loading::datafile_loaded)
             .add_systems(Update, loading::elevation_loaded)
+            .add_systems(Update, loading::check_loading_state.run_if(resource_changed::<loading::LoadingState>))
             .add_systems(Update, loading::set_camera_range)
             .add_systems(Update, rendering::update_meshes)
             .add_systems(Update, rendering::swap_mesh_alternates)
