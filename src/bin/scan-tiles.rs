@@ -74,7 +74,7 @@ fn main() {
     let mut tilesets = load_tilesets(&tilesets_filename).unwrap();
 
     for (name, ts) in tilesets.0.iter_mut() {
-        scan_tileset(&name, ts, &tilesets_filename);
+        scan_tileset(name, ts, &tilesets_filename);
     }
 
     save_tilesets(&tilesets, &tilesets_filename).unwrap();

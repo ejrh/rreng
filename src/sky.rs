@@ -3,9 +3,7 @@ use std::f32::consts::TAU;
 use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
 
-#[derive(Default)]
-pub struct SkyPlugin {
-}
+pub struct SkyPlugin;
 
 impl Plugin for SkyPlugin {
     fn build(&self, app: &mut App) {

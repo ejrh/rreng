@@ -12,21 +12,17 @@ pub(crate) fn _create_terrain(
     mut materials: ResMut<Assets<StandardMaterial>>
 ) {
     let noise = Simplex::new(42);
-
     const GRID_SIZE: usize = 10;
-    let mut grid = Vec::new();
-    for i in 0..GRID_SIZE + 1 {
-        grid.push(Vec::new());
-        for j in 0..GRID_SIZE + 1 {
-            let height = noise.get([i as f64 / GRID_SIZE as f64 * 1.0, j as f64  / GRID_SIZE as f64 * 1.0]) as f32;
-            let height = height;
-            grid[i].push(height);
+    let grid = ndarray::Array2::from_shape_fn(
+        (GRID_SIZE + 1, GRID_SIZE + 1),
+        |(r, c)| {
+            noise.get([r as f64 / GRID_SIZE as f64 * 1.0, c as f64 / GRID_SIZE as f64 * 1.0]) as f32
         }
-    }
+    );
 
     const GRID_SPACING: f32 = 100.0 / GRID_SIZE as f32;
 
-    let mesh= heightmap_to_mesh(&grid, &Vec3::new(GRID_SPACING, 25.0, GRID_SPACING));
+    let mesh = heightmap_to_mesh(&grid.view(), &Vec3::new(GRID_SPACING, 25.0, GRID_SPACING));
     let mesh = meshes.add(mesh);
 
     commands.spawn(PbrBundle {

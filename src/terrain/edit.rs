@@ -5,7 +5,7 @@ use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
 use ndarray::{Array2, Ix};
 
 use crate::terrain::selection::SelectedPoint;
-use crate::terrain::terrain::Terrain;
+use crate::terrain::Terrain;
 use crate::terrain::utils::Range2;
 
 pub fn click_point(

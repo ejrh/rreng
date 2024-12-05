@@ -118,9 +118,9 @@ fn build_rtin_mesh(
 
     let mut triangles = Vec::new();
 
+    #[allow(clippy::too_many_arguments)]
     fn process_triangle(
         ax: usize, ay: usize, bx: usize, by: usize, cx: usize, cy: usize,
-        points: &ndarray::ArrayView2<f32>,
         threshold: f32,
         errors: &ndarray::ArrayView2<f32>,
         triangles: &mut Vec<Triangle>,
@@ -131,8 +131,8 @@ fn build_rtin_mesh(
 
         if ax.abs_diff(cx) + ay.abs_diff(cy) > 1 && errors[[my, mx]] > threshold {
             // triangle doesn't approximate the surface well enough; split it into two
-            process_triangle(cx, cy, ax, ay, mx, my, points, threshold, errors, triangles);
-            process_triangle(bx, by, cx, cy, mx, my, points, threshold, errors, triangles);
+            process_triangle(cx, cy, ax, ay, mx, my, threshold, errors, triangles);
+            process_triangle(bx, by, cx, cy, mx, my, threshold, errors, triangles);
         } else {
             // add a triangle to the final mesh
             // let v1 = Vec3::new(ay as f32, points[[ay, ax]], ax as f32);
@@ -150,13 +150,11 @@ fn build_rtin_mesh(
 
     process_triangle(
         0, 0, tile_size, tile_size, tile_size, 0,
-        points,
         threshold,
         errors,
         &mut triangles);
     process_triangle(
         tile_size, tile_size, 0, 0, 0, tile_size,
-        points,
         threshold,
         errors,
         &mut triangles);

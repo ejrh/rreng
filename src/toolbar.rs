@@ -100,7 +100,6 @@ pub fn create_label(button_font: Handle<Font>, label: &str) -> TextBundle {
         font: button_font.clone(),
         font_size: 20.0,
         color: Color::srgb(0.9, 0.9, 0.9),
-        ..default()
     })
 }
 
@@ -110,7 +109,7 @@ const NORMAL_BUTTON: Color = Color::srgb(0.15, 0.15, 0.15);
 const DISABLED_BUTTON: Color = Color::srgb(0.1, 0.1, 0.1);
 
 pub fn toolbar_interaction(
-    mut interaction_query: Query<(&mut ToolbarButton, &Interaction), (Changed<Interaction>, With<Button>)>,
+    mut interaction_query: Query<(&mut ToolbarButton, &Interaction), Changed<Interaction>>,
 ) {
     for (mut button, interaction) in &mut interaction_query {
         match *interaction {

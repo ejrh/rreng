@@ -7,11 +7,9 @@ use bevy::{
     prelude::*,
 };
 
-use crate::terrain::terrain::Terrain;
+use crate::terrain::Terrain;
 
-#[derive(Default)]
-pub struct CameraPlugin {
-}
+pub struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {

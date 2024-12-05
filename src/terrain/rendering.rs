@@ -9,7 +9,7 @@ use ndarray::s;
 
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
-use crate::terrain::terrain::Terrain;
+use crate::terrain::Terrain;
 
 #[derive(Component)]
 pub struct TerrainMesh {
@@ -156,17 +156,7 @@ pub fn swap_mesh_alternates(
 
 fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> Mesh {
     if threshold == 0.0 {
-        let mut heights = Vec::new();
-        for row in data.rows() {
-            let mut height_row = Vec::new();
-            for x in row {
-                height_row.push(*x);
-            }
-            heights.push(height_row);
-        }
-
-        let mesh = heightmap_to_mesh(&heights, scale);
-        mesh
+        heightmap_to_mesh(&data, scale)
     } else {
         let Triangulation { triangles } = triangulate_rtin(&data, threshold);
 

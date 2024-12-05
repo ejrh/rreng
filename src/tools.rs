@@ -111,7 +111,7 @@ fn create_terraform_tools(
 
 fn update_tool_buttons(
     tools: ResMut<Tools>,
-    query: Query<(&Tool, &Interaction), (Changed<Interaction>, With<Button>)>,
+    query: Query<(&Tool, &Interaction), Changed<Interaction>>,
     mut state: ResMut<NextState<Tool>>,
     mut toolbar_lines: Query<(Entity, &mut Visibility), With<toolbar::ToolbarLine>>,
 ) {

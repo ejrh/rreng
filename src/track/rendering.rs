@@ -11,7 +11,8 @@ use crate::track::Segment;
  *    - rail height
  *    - sleeper height
  *    - bed height
- * filling up the space between ground level and RAIL_HEIGHT.
+ *
+ * These fill up the space between ground level and RAIL_HEIGHT.
  * The bed height is expanded below ground level to fully occupy dips in the terrain.
  */
 #[derive(Resource)]

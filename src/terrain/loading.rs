@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::camera::CameraState;
 use crate::terrain::datafile::DataFile;
-use crate::terrain::terrain::Terrain;
+use crate::terrain::Terrain;
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
 
 #[derive(Debug, Default, Resource)]
@@ -72,7 +72,7 @@ pub fn check_loading_state(
     /* Reset the terrain parameters */
     info!("Level bounds are: {:?}", datafile.bounds);
 
-    terrain.reset(&datafile);
+    terrain.reset(datafile);
 
     /* Process the data file and load the chunk elevations */
     let tilesets_path = asset_server.get_path(&loading_state.tilesets_handle).unwrap();
