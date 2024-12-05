@@ -55,7 +55,7 @@ pub fn heightmap_to_mesh(heights: &Vec<Vec<f32>>, scale: &Vec3) -> Mesh {
                 let p1 = verts[inds[1] as usize];
                 let p2 = verts[inds[2] as usize];
 
-                if p0.y < 0.01 && p1.y < 0.01 && p1.y < 0.01 { return; }
+                if p0.y < 0.01 && p1.y < 0.01 && p2.y < 0.01 { return; }
 
                 tris.extend_from_slice(inds);
 
