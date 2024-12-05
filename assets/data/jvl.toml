@@ -1,4 +1,4 @@
-size = [2160, 3840]
+size = [2880, 3840]
 
 # Notes:
 # Size is in points [rows, cols]
@@ -6,7 +6,7 @@ size = [2160, 3840]
 
 # Covers tiles 1432 to 1639
 [bounds]
-min = [1746880.0, 5430480.0]
+min = [1746880.0, 5429760.0]
 max = [1750720.0, 5432640.0]
 
 #1432 bounds:
