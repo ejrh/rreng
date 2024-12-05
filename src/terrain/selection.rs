@@ -59,7 +59,7 @@ pub fn update_selected_point(
     if results.is_empty() {
         return;
     }
-    let (entity, intersection) = &results[0];
+    let (_entity, intersection) = &results[0];
 
     let point = intersection.position();
 

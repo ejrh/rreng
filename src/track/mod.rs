@@ -1,7 +1,4 @@
-use bevy::{
-    prelude::*,
-};
-use bevy::ui::ZIndex::Global;
+use bevy::prelude::*;
 
 pub mod rendering;
 

@@ -97,7 +97,7 @@ pub fn check_loading_state(
 }
 
 pub fn elevation_loaded(
-    mut loading_state: ResMut<LoadingState>,
+    loading_state: ResMut<LoadingState>,
     mut terrain: ResMut<Terrain>,
     mut events: EventReader<AssetEvent<ElevationFile>>,
     assets: Res<Assets<ElevationFile>>,

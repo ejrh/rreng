@@ -1,10 +1,8 @@
-use std::marker::PhantomData;
 use bevy::{
-    asset::AssetServer,
     ecs::system::EntityCommands,
     prelude::*,
     text::TextStyle,
-    ui::{AlignContent, AlignSelf, BackgroundColor, FlexDirection, PositionType},
+    ui::{BackgroundColor, FlexDirection, PositionType},
     utils::default,
 };
 
@@ -131,7 +129,7 @@ pub fn toolbar_interaction(
 pub fn button_changed(
     mut query: Query<(Entity, &ToolbarButton, &mut BackgroundColor), Changed<ToolbarButton>>,
 ) {
-    for (entity, button, mut color) in &mut query {
+    for (_entity, button, mut color) in &mut query {
         if !button.enabled {
             *color = DISABLED_BUTTON.into();
         } else if button.selected {

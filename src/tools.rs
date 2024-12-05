@@ -1,7 +1,5 @@
-use std::cmp::Ordering;
 use bevy::asset::AssetServer;
 use bevy::prelude::*;
-use bevy::tasks::futures_lite::StreamExt;
 
 use crate::{terrain, toolbar};
 use crate::toolbar::ToolbarButton;
@@ -58,7 +56,6 @@ enum TerraformTool {
 }
 
 fn create_tools(
-    tools: ResMut<Tools>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
 ) {
@@ -114,7 +111,7 @@ fn create_terraform_tools(
 
 fn update_tool_buttons(
     tools: ResMut<Tools>,
-    mut query: Query<(&Tool, &Interaction), (Changed<Interaction>, With<Button>)>,
+    query: Query<(&Tool, &Interaction), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<NextState<Tool>>,
     mut toolbar_lines: Query<(Entity, &mut Visibility), With<toolbar::ToolbarLine>>,
 ) {
@@ -135,7 +132,6 @@ fn update_tool_buttons(
 }
 
 fn update_terraform_tool_buttons(
-    tools: ResMut<Tools>,
     mut query: Query<(&TerraformTool, &mut ToolbarButton, Ref<Interaction>), With<Button>>,
     mut state: ResMut<NextState<TerraformTool>>,
 ) {

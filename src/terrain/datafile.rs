@@ -1,11 +1,8 @@
-use std::io::Cursor;
-
 use bevy::asset::{Asset, AssetLoader, AsyncReadExt, LoadContext};
 use bevy::asset::io::Reader;
 use bevy::prelude::*;
 use serde::Deserialize;
 use thiserror::Error;
-use tiff::decoder::DecodingResult;
 
 use crate::terrain::tiles::TileSets;
 

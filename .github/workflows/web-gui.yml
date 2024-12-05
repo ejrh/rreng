@@ -25,6 +25,7 @@ jobs:
           cargo install wasm-bindgen-cli || true
 
       - name: Set version extra
+        if: github.ref == 'refs/heads/wip'
         run: |
           export DATEPART=`date +%Y.%m.%d`
           export GITPART=`git rev-parse --short HEAD`

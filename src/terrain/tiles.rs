@@ -4,7 +4,7 @@ use std::io::Cursor;
 use bevy::asset::{Asset, AssetLoader, AsyncReadExt, LoadContext};
 use bevy::asset::io::Reader;
 use bevy::math::Rect;
-use bevy::prelude::{info, TypePath};
+use bevy::prelude::TypePath;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tiff::decoder::DecodingResult;

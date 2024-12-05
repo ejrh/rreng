@@ -1,11 +1,8 @@
-use std::ops::Range;
-
 use bevy::prelude::*;
 use ndarray::s;
 
 use crate::terrain::datafile::DataFile;
-use crate::terrain::heightmap::heightmap_to_mesh;
-use crate::terrain::utils::{Range2, get_copyable_range, restrict_ranges};
+use crate::terrain::utils::{Range2, get_copyable_range};
 
 #[derive(Default, Debug)]
 pub struct BlockInfo {
@@ -84,7 +81,7 @@ impl Terrain {
         let r = point.y as usize;
         let c = point.x as usize;
 
-        if r >= 0 && c >= 0 && r < self.elevation.dim().0 && c < self.elevation.dim().1 {
+        if r < self.elevation.dim().0 && c < self.elevation.dim().1 {
             self.elevation[(r, c)]
         } else {
             -1.0

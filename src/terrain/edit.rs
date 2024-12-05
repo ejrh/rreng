@@ -21,7 +21,7 @@ pub fn click_point(
     let row = selected_point.point.z as Ix;
     let col = selected_point.point.x as Ix;
 
-    if row < 0 || col < 0 || row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+    if row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
         return;
     }
 
@@ -50,7 +50,7 @@ pub fn drag_point(
         let row = start_point.point.z as Ix;
         let col = start_point.point.x as Ix;
 
-        if row < 0 || col < 0 || row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+        if row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
             return;
         }
 
@@ -59,7 +59,7 @@ pub fn drag_point(
         let row = selected_point.point.z as Ix;
         let col = selected_point.point.x as Ix;
 
-        if row < 0 || col < 0 || row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+        if row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
             return;
         }
 

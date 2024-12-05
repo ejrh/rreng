@@ -6,7 +6,7 @@ use noise::{NoiseFn, Simplex};
 
 use crate::terrain::heightmap::heightmap_to_mesh;
 
-pub(crate) fn create_terrain(
+pub(crate) fn _create_terrain(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>
@@ -32,7 +32,7 @@ pub(crate) fn create_terrain(
     commands.spawn(PbrBundle {
         mesh,
         material: materials.add(StandardMaterial {
-            base_color: Color::rgb(0.3, 0.8, 0.4),
+            base_color: Color::srgb(0.3, 0.8, 0.4),
             perceptual_roughness: 0.9,
             ..default()
         }),

@@ -3,12 +3,7 @@ use std::f32::consts::TAU;
 use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
 use bevy::render::render_asset::RenderAssetUsages;
-use ndarray::s;
 
-use crate::terrain::heightmap::heightmap_to_mesh;
-use crate::terrain::rendering::TerrainRenderParams;
-use crate::terrain::terrain::Terrain;
-use crate::terrain::utils::get_copyable_range;
 use crate::track::Segment;
 
 /**
@@ -76,12 +71,12 @@ pub fn init_render_params(
 }
 
 pub fn update_track_meshes(
-    segments: Query<(Entity, &Segment, &Transform), Changed<Segment>>,
+    segments: Query<(Entity, &Segment), Changed<Segment>>,
     params: Res<TrackRenderParams>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (segment_id, segment, transform) in segments.iter() {
+    for (segment_id, segment) in segments.iter() {
         commands.entity(segment_id).despawn_descendants();
 
         let rail_mesh = create_rail_mesh(&params, segment.length, false, false);

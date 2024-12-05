@@ -1,6 +1,8 @@
 use std::f32::consts::PI;
+
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
 use crate::terrain::terrain::Terrain;
 
 #[derive(Default)]

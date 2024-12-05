@@ -1,10 +1,10 @@
-use std::fmt::{Display, Formatter};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use bevy::log::{debug, error, info, warn};
+
+use bevy::log::{error, info};
 use bevy::math::Rect;
 use thiserror::Error;
-use tiff::decoder::DecodingResult;
+
 use rreng::terrain::tiles::{Tile, TileSet, TileSets};
 
 const TILESETS_PATH: &str = "assets/data/tiles.toml";
@@ -31,7 +31,7 @@ fn save_tilesets(tilesets: &TileSets, path: &Path) -> Result<(), std::io::Error>
     Ok(())
 }
 
-fn scan_tileset(name: &str, tileset: &mut TileSet, root_path: &Path) {
+fn scan_tileset(_name: &str, tileset: &mut TileSet, root_path: &Path) {
     let tiles_glob = root_path.parent().unwrap().join(&tileset.root).join(&tileset.pattern);
 
     tileset.files.clear();
@@ -49,7 +49,7 @@ fn scan_tileset(name: &str, tileset: &mut TileSet, root_path: &Path) {
     }
 }
 
-fn scan_tile(path: &Path, name: &str) -> Result<Tile, ScanError> {
+fn scan_tile(path: &Path, _name: &str) -> Result<Tile, ScanError> {
     let f = std::fs::File::open(path)?;
     let tiff = geotiff::GeoTiff::read(f)?;
 

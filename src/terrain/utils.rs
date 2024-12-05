@@ -37,6 +37,7 @@ pub fn restrict_ranges(from_r: &mut Range<isize>, to_r: &mut Range<isize>, limit
         from_r.end -= excess;
         to_r.end -= excess;
     }
+    #[allow(unstable_name_collisions)]
     if from_r.is_empty() || to_r.is_empty() {
         *from_r = 0..0;
         *to_r = 0..0;

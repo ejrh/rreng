@@ -3,6 +3,7 @@ use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
     prelude::*,
 };
+
 use rreng::*;
 
 fn main() {
