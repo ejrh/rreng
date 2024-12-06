@@ -1,18 +1,21 @@
 use std::collections::HashMap;
 use bevy::log::info;
-use bevy::prelude::{Changed, Component, DetectChanges, DetectChangesMut, Entity, Query, Transform, Vec3, Visibility, With, Without};
+use bevy::prelude::{Changed, Component, DetectChanges, DetectChangesMut, Entity, Query, Ref, Transform, Vec3, Visibility, With, Without};
 
 use crate::track::point::Point;
 
 #[derive(Component)]
-#[require(Transform, Visibility)]
+#[require(SegmentLinkage, Transform, Visibility)]
 pub struct Segment {
     pub from_point: Entity,
     pub to_point: Entity,
     pub length: f32,
-    pub next_segment: Entity,
-    pub prev_segment: Entity,
-    pub prev_length: f32,
+}
+
+#[derive(Component, Default)]
+pub struct SegmentLinkage {
+    pub next_segment: Option<Entity>,
+    pub prev_segment: Option<(Entity, f32)>,
 }
 
 pub fn update_points(
@@ -24,19 +27,18 @@ pub fn update_points(
     for mut seg in segments.iter_mut() {
         if changed_points.contains(seg.from_point) || changed_points.contains(seg.to_point) {
             seg.set_changed();
-            info!("Updated points");
         }
     }
 }
 
-pub fn update_segments(
-    mut segments: Query<(Entity, &mut Segment, &mut Transform)>,
-    all_points: Query<&Transform, (With<Point>, Without<Segment>)>,
+pub fn update_segment_linkage(
+    mut segments: Query<(Entity, Ref<Segment>, &mut SegmentLinkage)>,
 ) {
-    // TODO this is inefficient because:
-    //  1. it builds the point-segment maps every frame
-    //  2. it processes all segments every frame even if they haven't changed
-    //  it needs to do (2) because we need all segments (not just changed) for (1)
+    if !segments.iter().any(|(_, s, _)| s.is_changed()) {
+        return;
+    }
+
+    info!("calculating segment linkage");
 
     let mut point_begins = HashMap::new();
     let mut point_ends = HashMap::new();
@@ -45,16 +47,20 @@ pub fn update_segments(
         point_ends.insert(seg.to_point, (seg_id, seg.length));
     }
 
-    for (seg_id, mut seg, mut transform) in segments.iter_mut() {
-        // if !seg.is_changed() {
-        //     continue;
-        // }
+    for (_, seg, mut linkage) in segments.iter_mut() {
+        linkage.next_segment = point_begins.get(&seg.to_point).copied();
+        linkage.prev_segment = point_ends.get(&seg.from_point).copied();
+    }
+}
+
+pub fn update_segments(
+    mut segments: Query<(&mut Segment, &mut Transform), Changed<Segment>>,
+    all_points: Query<&Transform, (With<Point>, Without<Segment>)>,
+) {
+    for (mut seg, mut transform) in segments.iter_mut() {
         let pt1 = all_points.get(seg.from_point).unwrap();
         let pt2 = all_points.get(seg.to_point).unwrap();
         seg.length = pt1.translation.distance(pt2.translation);
-
-        seg.next_segment = *point_begins.get(&seg.to_point).unwrap_or(&Entity::from_raw(0));
-        (seg.prev_segment, seg.prev_length) = *point_ends.get(&seg.from_point).unwrap_or(&(Entity::from_raw(0), seg.length));
 
         transform.translation = pt1.translation;
         transform.look_to(pt1.translation - pt2.translation, Vec3::Y);

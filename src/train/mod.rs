@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::track::segment::Segment;
+use crate::track::segment::{Segment, SegmentLinkage};
 
 const TRAIN_PATH: &str = "models/lowpoly_train.glb";
 
@@ -14,44 +14,38 @@ pub struct TrainCar {
 pub fn move_train(
     time: Res<Time>,
     mut trains: Query<&mut TrainCar>,
-    segments: Query<&Segment, Without<TrainCar>>,
+    segments: Query<(&Segment, &SegmentLinkage), Without<TrainCar>>,
 ) {
     for mut car in trains.iter_mut() {
-        let segment = segments.get(car.segment_id).unwrap();
+        let (segment, linkage) = segments.get(car.segment_id).unwrap();
         if segment.length == 0.0 { continue; }
 
-        if car.speed < 0.0 {
-            if car.speed >= -10.0 {
-                car.speed -= 0.1 * time.delta_secs();
-            }
-        } else {
-            if car.speed <= 10.0 {
-                car.speed += 0.1 * time.delta_secs();
-            }
+        if car.speed < 0.0 && car.speed >= -10.0 {
+            car.speed -= 0.1 * time.delta_secs();
+        } else if car.speed > 0.0 && car.speed <= 10.0 {
+            car.speed += 0.1 * time.delta_secs();
         }
 
         car.segment_position += car.speed * time.delta_secs();
         if car.segment_position >= segment.length {
-            let next_segment = segment.next_segment;
-            if next_segment.index() != 0 {
+            if let Some(next_segment) = linkage.next_segment {
                 car.segment_id = next_segment;
                 car.segment_position -= segment.length;
-                info!("moved onto next segment at {}", car.segment_position);
+                debug!("moved onto next segment at {}", car.segment_position);
             } else {
                 car.speed = -0.001;
                 car.segment_position = segment.length;
-                info!("no next segment, reversing");
+                debug!("no next segment, reversing");
             }
         } else if car.segment_position < 0.0 {
-            let prev_segment = segment.prev_segment;
-            if prev_segment.index() != 0 {
+            if let Some((prev_segment, prev_length)) = linkage.prev_segment {
                 car.segment_id = prev_segment;
-                car.segment_position += segment.prev_length;
-                info!("moved onto prev segment at {}", car.segment_position);
+                car.segment_position += prev_length;
+                debug!("moved onto prev segment at {}", car.segment_position);
             } else {
                 car.speed = 0.001;
                 car.segment_position = 0.0;
-                info!("no prev segment, reversing");
+                debug!("no prev segment, reversing");
             }
         }
     }

@@ -20,7 +20,7 @@ impl Plugin for TrackPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Startup, rendering::init_render_params)
-            .add_systems(Update, (segment::update_points, segment::update_segments).chain())
+            .add_systems(Update, (segment::update_points, segment::update_segments, segment::update_segment_linkage).chain())
             .add_systems(Update, point::render_points)
             .add_systems(Update, rendering::update_track_meshes);
     }
@@ -55,9 +55,6 @@ pub fn create_track(
             from_point: *pt1,
             to_point: *pt2,
             length: 0.0,
-            next_segment: Entity::from_raw(0),
-            prev_segment: Entity::from_raw(0),
-            prev_length: 0.0,
         });
     }
 }
