@@ -13,9 +13,8 @@ pub fn create_train(
 
     let angle = Quat::from_axis_angle(Vec3::Y, (54.0f32).to_radians());
 
-    commands.spawn(SceneBundle {
-        scene: asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH)),
-        transform: Transform::from_scale(Vec3::splat(3.28084)).with_rotation(angle).with_translation(point),
-        ..default()
-    });
+    commands.spawn((
+        SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
+        Transform::from_scale(Vec3::splat(3.28084)).with_rotation(angle).with_translation(point),
+    ));
 }

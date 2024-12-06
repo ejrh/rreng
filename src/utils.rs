@@ -27,20 +27,21 @@ pub fn show_version(
 
     let font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
-    let text_style = TextStyle {
-        font: font.clone(),
-        font_size: 20.0,
-        color: Color::Srgba(YELLOW),
-    };
-
-    commands.spawn(TextBundle::from_section(version_str, text_style)
-        .with_style(Style {
+    commands.spawn((
+        Node {
             position_type: PositionType::Absolute,
             bottom: Val::Px(10.0),
             right: Val::Px(10.0),
             ..default()
-        })
-    );
+        },
+        Text(version_str.to_owned()),
+        TextFont {
+            font: font.clone(),
+            font_size: 20.0,
+            ..default()
+        },
+        TextColor(Color::Srgba(YELLOW)),
+    ));
 }
 
 pub fn show_help_text(
@@ -49,22 +50,23 @@ pub fn show_help_text(
 ) {
     let font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
-    let text_style = TextStyle {
-        font: font.clone(),
-        font_size: 16.0,
-        color: Color::Srgba(GRAY),
-    };
-
     const HELP_STR: &str = "Controls: WASD move, QE rotate, ZX zoom, PgUp/Dn pitch";
 
-    commands.spawn(TextBundle::from_section(HELP_STR, text_style)
-        .with_style(Style {
+    commands.spawn((
+        Node {
             position_type: PositionType::Absolute,
             bottom: Val::Px(40.0),
             right: Val::Px(10.0),
             ..default()
-        })
-    );
+        },
+        Text(HELP_STR.to_owned()),
+        TextFont {
+            font: font.clone(),
+            font_size: 16.0,
+            ..default()
+        },
+        TextColor(Color::Srgba(GRAY)),
+    ));
 }
 
 pub fn close_on_esc(

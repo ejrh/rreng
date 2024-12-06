@@ -49,7 +49,7 @@ fn debug_terrain(
 ) {
     let pos = Vec3::new(0.5 * terrain.size[1] as f32,0.0,  0.5 * terrain.size[0] as f32);
     let size = Vec2::new(terrain.size[1] as f32, terrain.size[0] as f32);
-    gizmos.rect(pos, Quat::from_axis_angle(Vec3::X, PI/2.0), size, Color::srgb(1.0, 1.0, 0.5));
+    gizmos.rect(Isometry3d::new(pos, Quat::from_axis_angle(Vec3::X, PI/2.0)), size, Color::srgb(1.0, 1.0, 0.5));
 
     let h = terrain.size[0] as f32;
     let w = terrain.size[1] as f32;

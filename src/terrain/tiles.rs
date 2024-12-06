@@ -42,11 +42,11 @@ impl AssetLoader for TileSetsLoader {
     type Settings = ();
     type Error = TileSetsLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext<'_>
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         let mut str = String::new();
         reader.read_to_string(&mut str).await?;
@@ -81,11 +81,11 @@ impl AssetLoader for ElevationFileLoader {
     type Settings = ();
     type Error = ElevationFileLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext<'_>
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;

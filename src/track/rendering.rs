@@ -81,31 +81,28 @@ pub fn update_track_meshes(
         commands.entity(segment_id).despawn_descendants();
 
         let rail_mesh = create_rail_mesh(&params, segment.length, false, false);
-        commands.spawn(MaterialMeshBundle {
-            mesh: meshes.add(rail_mesh),
-            material: params.rail_material.clone(),
-            ..default()
-        }).set_parent(segment_id);
+        commands.spawn((
+            Mesh3d(meshes.add(rail_mesh)),
+            MeshMaterial3d(params.rail_material.clone()),
+        )).set_parent(segment_id);
 
         let num_sleepers = f32::round(segment.length / params.sleeper_spacing) as usize;
         let sleeper_offset = segment.length / (num_sleepers as f32);
         for i in 0..num_sleepers {
             let sleeper_mesh = Cuboid::from_size(params.sleeper_dims);
             let sleeper_transform = Transform::from_xyz(0.0, params.sleeper_height + params.sleeper_dims.y/2.0, sleeper_offset * (i as f32 + 0.5));
-            commands.spawn(MaterialMeshBundle {
-                mesh: meshes.add(sleeper_mesh.mesh()),
-                material: params.sleeper_material.clone(),
-                transform: sleeper_transform,
-                ..default()
-            }).set_parent(segment_id);
+            commands.spawn((
+                Mesh3d(meshes.add(sleeper_mesh.mesh())),
+                MeshMaterial3d(params.sleeper_material.clone()),
+                sleeper_transform,
+            )).set_parent(segment_id);
         }
 
         let bed_mesh = create_bed_mesh(&params, segment.length, false, false);
-        commands.spawn(MaterialMeshBundle {
-            mesh: meshes.add(bed_mesh),
-            material: params.bed_material.clone(),
-            ..default()
-        }).set_parent(segment_id);
+        commands.spawn((
+            Mesh3d(meshes.add(bed_mesh)),
+            MeshMaterial3d(params.bed_material.clone()),
+        )).set_parent(segment_id);
     }
 }
 

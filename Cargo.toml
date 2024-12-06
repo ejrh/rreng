@@ -20,7 +20,7 @@ toml = "0.8"
 tracing-subscriber = "0.3"
 
 [dependencies.bevy]
-version = "0.14"
+version = "0.15"
 default-features = false
 features = [
     "bevy_winit",
@@ -29,24 +29,25 @@ features = [
     "bevy_gltf",
     "bevy_state",
     "bevy_render",
+    "bevy_mesh_picking_backend",
+    "bevy_ui_picking_backend",
+    "bevy_picking",
     "bevy_pbr",
     "bevy_gizmos",
     "bevy_ui",
+    "bevy_window",
+    "animation",
     "multi_threaded",
     "png",
     "webgl2"
 ]
 
 [dependencies.bevy-inspector-egui]
-version = "0.25"
+version = "0.28"
 default-features = false
 features = [
     "bevy_render"
 ]
-
-[dependencies.bevy_mod_raycast]
-version = "0.18"
-default-features = false
 
 [profile.release]
 opt-level = 'z'

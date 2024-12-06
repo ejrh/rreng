@@ -1,7 +1,7 @@
 use bevy::asset::Assets;
 use bevy::math::Vec3;
-use bevy::pbr::{PbrBundle, StandardMaterial};
-use bevy::prelude::{default, Color, Commands, Mesh, ResMut};
+use bevy::pbr::{MeshMaterial3d, StandardMaterial};
+use bevy::prelude::{default, Color, Commands, Mesh, Mesh3d, ResMut};
 use noise::{NoiseFn, Simplex};
 
 use crate::terrain::heightmap::heightmap_to_mesh;
@@ -25,13 +25,12 @@ pub(crate) fn _create_terrain(
     let mesh = heightmap_to_mesh(&grid.view(), &Vec3::new(GRID_SPACING, 25.0, GRID_SPACING));
     let mesh = meshes.add(mesh);
 
-    commands.spawn(PbrBundle {
-        mesh,
-        material: materials.add(StandardMaterial {
+    commands.spawn((
+        Mesh3d(mesh),
+        MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgb(0.3, 0.8, 0.4),
             perceptual_roughness: 0.9,
             ..default()
-        }),
-        ..default()
-    });
+        }))
+    ));
 }

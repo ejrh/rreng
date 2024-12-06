@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use bevy_mod_raycast::prelude::CursorRayPlugin;
 use ndarray::s;
+
 use crate::terrain::datafile::DataFile;
 use crate::terrain::utils::{get_copyable_range, Range2};
 
@@ -53,8 +53,10 @@ impl Plugin for TerrainPlugin {
             .add_systems(Update, loading::set_camera_range)
             .add_systems(Update, rendering::update_meshes)
             .add_systems(Update, rendering::swap_mesh_alternates)
-            .add_plugins(CursorRayPlugin)
-            .init_resource::<selection::SelectedPoint>()
+            .init_resource::<selection::SelectedPoint>();
+
+        app
+            // .add_plugins(MeshPickingPlugin)
             .add_systems(Startup, selection::create_marker)
             .add_systems(Update, selection::update_selected_point);
     }

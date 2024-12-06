@@ -36,32 +36,31 @@ fn create_lights(
         brightness: 50.0,
     });
 
+    let sun_mesh: Mesh = Sphere::new(SUN_RADIUS).into();
+    let mut sun_material = StandardMaterial::from(SUN_COLOUR);
+    sun_material.unlit = true;
+
     commands
-        .spawn(Sun {
-            angle: INITIAL_SUN_ANGLE,
-            period: SUN_PERIOD,
-        })
-        .insert({
-            let sun_mesh: Mesh = Sphere::new(SUN_RADIUS).into();
-            let mut sun_material = StandardMaterial::from(SUN_COLOUR);
-            sun_material.unlit = true;
-            MaterialMeshBundle {
-                mesh: meshes.add(sun_mesh),
-                material: materials.add(sun_material),
-                transform: Transform::from_xyz(SUN_DISTANCE, 0.0, 0.0),
-                ..default()
-            }})
-        .insert((NotShadowCaster, NotShadowReceiver))
+        .spawn((
+            Sun {
+                angle: INITIAL_SUN_ANGLE,
+                period: SUN_PERIOD,
+            },
+            Mesh3d(meshes.add(sun_mesh)),
+            MeshMaterial3d(materials.add(sun_material)),
+            Transform::from_xyz(SUN_DISTANCE, 0.0, 0.0),
+            NotShadowCaster,
+            NotShadowReceiver,
+        ))
         .with_children(|cb| {
-            cb.spawn(DirectionalLightBundle {
-                directional_light: DirectionalLight {
+            cb.spawn((
+                DirectionalLight {
                     illuminance: 2500.0,
                     shadows_enabled: true,
                     ..default()
                 },
-                transform: Transform::default().looking_at(-Vec3::X, Vec3::Y),
-                ..default()
-            });
+                Transform::default().looking_at(-Vec3::X, Vec3::Y),
+            ));
         });
 }
 
@@ -72,7 +71,7 @@ fn move_sun(
 ) {
     let (mut sun, mut transform) = sun_query.single_mut();
 
-    sun.angle += TAU/sun.period * time.delta_seconds();
+    sun.angle += TAU/sun.period * time.delta_secs();
     transform.rotation = Quat::from_axis_angle(Vec3::Z, sun.angle);
     transform.translation = transform.rotation.mul_vec3(Vec3::new(SUN_DISTANCE, 0.0, 0.0));
 

@@ -40,9 +40,11 @@ pub fn init_render_params(
     mut commands: Commands,
 ) {
     let parent_id = commands
-        .spawn(TerrainParent)
-        .insert(VisibilityBundle::default())
-        .insert(TransformBundle::default()).id();
+        .spawn((
+            TerrainParent,
+            Visibility::default(),
+            Transform::default()
+        )).id();
 
     let mut grass_material = StandardMaterial::from(Color::srgb(0.3, 0.6, 0.2));
     grass_material.perceptual_roughness = 0.75;
@@ -107,12 +109,12 @@ pub fn update_meshes(
             low_res,
         };
 
-        commands.entity(entity).insert(MaterialMeshBundle {
-            material: params.grass_material.clone(),
-            mesh,
+        commands.entity(entity).insert((
+            Mesh3d(mesh),
+            MeshMaterial3d(params.grass_material.clone()),
             transform,
-            ..default()
-        }).insert(alternates).remove::<Aabb>();
+            alternates,
+        )).remove::<Aabb>();
     }
 
     /* Clean up orphaned terrain meshes */
@@ -126,14 +128,14 @@ pub fn update_meshes(
 
 pub fn swap_mesh_alternates(
     camera_query: Query<&GlobalTransform, (With<Camera>, Changed<GlobalTransform>)>,
-    mesh_alternates: Query<(Entity, &Handle<Mesh>, &GlobalTransform, &TerrainMeshAlternates)>,
+    mesh_alternates: Query<(Entity, &Mesh3d, &GlobalTransform, &TerrainMeshAlternates)>,
     mut commands: Commands,
 ) {
     const TOLERANCE: f32 = 50.0;
 
     let Ok(camera_transform) = camera_query.get_single() else { return };
 
-    for (entity, current, mesh_transform, alternates) in mesh_alternates.iter() {
+    for (entity, Mesh3d(current), mesh_transform, alternates) in mesh_alternates.iter() {
         let dist = mesh_transform.translation().distance(camera_transform.translation());
 
         let diff = dist - alternates.cutoff;
@@ -149,7 +151,7 @@ pub fn swap_mesh_alternates(
                 continue;
             }
 
-            commands.entity(entity).insert(preferred.clone());
+            commands.entity(entity).insert(Mesh3d(preferred.clone()));
         }
     }
 }

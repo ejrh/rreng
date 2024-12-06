@@ -34,12 +34,17 @@ pub fn create_track(
 
     let length = 19.46;
     commands
-        .spawn(Segment { length })
-        .insert(TransformBundle::from(Transform::from_xyz(x, y, z - length/2.0)))
-        .insert(VisibilityBundle::default());
+        .spawn((
+            Segment { length },
+            Visibility::default(),
+            Transform::from_xyz(x, y, z - length / 2.0),
+        ));
 
     commands
-        .spawn(Segment { length: 10.0 })
-        .insert(TransformBundle::from(Transform::from_rotation(Quat::from_axis_angle(Vec3::Y, 175.0f32.to_radians())).with_translation(Vec3::new(x, y, z - length/2.0))))
-        .insert(VisibilityBundle::default());
+        .spawn((
+            Segment { length: 10.0 },
+            Visibility::default(),
+            Transform::from_rotation(Quat::from_axis_angle(Vec3::Y, 175.0f32.to_radians()))
+                .with_translation(Vec3::new(x, y, z - length / 2.0)),
+        ));
 }

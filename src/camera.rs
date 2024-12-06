@@ -50,10 +50,11 @@ impl Default for CameraState {
 struct CameraPositionLabel;
 
 fn create_camera(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        tonemapping: Tonemapping::None,
-        ..default()
-    }).insert(CameraState::default());
+    commands.spawn((
+        Camera3d::default(),
+        Tonemapping::None,
+        CameraState::default()
+    ));
 }
 
 fn camera_movement(time: Res<Time>,
@@ -102,20 +103,20 @@ fn camera_movement(time: Res<Time>,
     if movement_delta != Vec3::ZERO {
         let movement_delta = transform.rotation.mul_vec3(movement_delta);
         let movement_delta = Vec3 { y: 0.0, ..movement_delta }.normalize() * state.distance;
-        state.focus += movement_delta * time.delta_seconds();
+        state.focus += movement_delta * time.delta_secs();
 
         state.focus = state.focus.clamp(state.focus_range.start, state.focus_range.end);
     }
 
-    state.yaw += yaw_delta * time.delta_seconds();
+    state.yaw += yaw_delta * time.delta_secs();
     if state.yaw < 0.0 { state.yaw += TAU; }
     else if state.yaw >= TAU { state.yaw -= TAU; }
 
-    state.pitch += pitch_delta * time.delta_seconds();
+    state.pitch += pitch_delta * time.delta_secs();
     state.pitch = state.pitch.clamp(state.pitch_range.start, state.pitch_range.end);
 
     if distance_delta != 0.0 {
-        state.distance *= 2.0f32.powf(distance_delta * time.delta_seconds());
+        state.distance *= 2.0f32.powf(distance_delta * time.delta_secs());
 
         state.distance = state.distance.clamp(state.distance_range.start, state.distance_range.end);
     }
@@ -138,7 +139,7 @@ fn update_camera_position(
 
     /* Update position text if it exists */
     if let Ok(mut text) = text_query.get_single_mut() {
-        text.sections[0].value = format!("Camera: focus {:3.0}, {:3.0}; yaw {:3.0}; pitch {:3.0}",
+        text.0 = format!("Camera: focus {:3.0}, {:3.0}; yaw {:3.0}; pitch {:3.0}",
                                          state.focus.z, state.focus.x, state.yaw.to_degrees(), state.pitch.to_degrees());
     }
 }
@@ -149,18 +150,20 @@ pub fn create_camera_position_text(
 ) {
     let font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
-    let text_style = TextStyle {
-        font: font.clone(),
-        font_size: 16.0,
-        color: Color::Srgba(GRAY),
-    };
-
-    commands.spawn(TextBundle::from_section("", text_style)
-        .with_style(Style {
+    commands.spawn((
+        Node {
             position_type: PositionType::Absolute,
             top: Val::Px(10.0),
             right: Val::Px(10.0),
             ..default()
-        })
-    ).insert(CameraPositionLabel);
+        },
+        Text("".to_owned()),
+        TextFont {
+            font: font.clone(),
+            font_size: 16.0,
+            ..default()
+        },
+        TextColor(Color::Srgba(GRAY)),
+        CameraPositionLabel
+    ));
 }

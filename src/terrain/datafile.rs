@@ -29,11 +29,11 @@ impl AssetLoader for DataFileLoader {
     type Settings = ();
     type Error = DataFileLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        load_context: &'a mut LoadContext<'_>
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         load_context.load::<TileSets>("data/tiles.toml");
 
