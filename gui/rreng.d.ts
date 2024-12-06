@@ -6,26 +6,15 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly main: (a: number, b: number) => number;
-  readonly wgpu_render_bundle_set_pipeline: (a: number, b: bigint) => void;
-  readonly wgpu_render_bundle_set_bind_group: (a: number, b: number, c: bigint, d: number, e: number) => void;
-  readonly wgpu_render_bundle_set_vertex_buffer: (a: number, b: number, c: bigint, d: bigint, e: bigint) => void;
-  readonly wgpu_render_bundle_set_push_constants: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly wgpu_render_bundle_draw: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly wgpu_render_bundle_draw_indexed: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-  readonly wgpu_render_bundle_draw_indirect: (a: number, b: bigint, c: bigint) => void;
-  readonly wgpu_render_bundle_draw_indexed_indirect: (a: number, b: bigint, c: bigint) => void;
-  readonly wgpu_render_bundle_set_index_buffer: (a: number, b: bigint, c: number, d: bigint, e: bigint) => void;
-  readonly wgpu_render_bundle_pop_debug_group: (a: number) => void;
-  readonly wgpu_render_bundle_insert_debug_marker: (a: number, b: number) => void;
-  readonly wgpu_render_bundle_push_debug_group: (a: number, b: number) => void;
   readonly __wbindgen_export_0: (a: number) => void;
   readonly __wbindgen_export_1: (a: number, b: number) => number;
   readonly __wbindgen_export_2: (a: number, b: number, c: number, d: number) => number;
   readonly __wbindgen_export_3: (a: number, b: number, c: number) => void;
   readonly __wbindgen_export_4: WebAssembly.Table;
-  readonly __wbindgen_export_5: (a: number, b: number) => void;
-  readonly __wbindgen_export_6: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_export_5: (a: number, b: number, c: number) => void;
+  readonly __wbindgen_export_6: (a: number, b: number) => void;
   readonly __wbindgen_export_7: (a: number, b: number, c: number, d: number) => void;
+  readonly __wbindgen_export_8: (a: number, b: number, c: number) => void;
   readonly __wbindgen_start: () => void;
 }
 
