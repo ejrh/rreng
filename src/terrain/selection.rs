@@ -1,3 +1,4 @@
+use bevy::color::palettes::basic::GRAY;
 use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
 use bevy::picking::backend::prelude::RayMap;
 use bevy::picking::backend::ray::RayId;
@@ -69,4 +70,47 @@ pub fn update_selected_point(
     if let Ok(mut transform) = marker_query.get_single_mut() {
         transform.translation = point;
     }
+}
+
+#[derive(Component)]
+pub struct CursorPositionLabel;
+
+pub fn update_cursor_position(
+    mut text_query: Query<&mut Text, With<CursorPositionLabel>>,
+    marker_query: Query<&mut Transform, With<SelectionMarker>>,
+) {
+    let Ok(transform) = marker_query.get_single()
+    else { return; };
+
+    /* Update position text if it exists */
+    if let Ok(mut text) = text_query.get_single_mut() {
+        text.0 = format!(
+            "Cursor: {:3.0}, {:3.0}; elevation {:3.0}",
+            transform.translation.z, transform.translation.x, transform.translation.y
+        );
+    }
+}
+
+pub fn create_cursor_position_text(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+) {
+    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
+
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(40.0),
+            right: Val::Px(10.0),
+            ..default()
+        },
+        Text("".to_owned()),
+        TextFont {
+            font: font.clone(),
+            font_size: 16.0,
+            ..default()
+        },
+        TextColor(Color::Srgba(GRAY)),
+        CursorPositionLabel
+    ));
 }

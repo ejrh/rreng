@@ -56,9 +56,10 @@ impl Plugin for TerrainPlugin {
             .init_resource::<selection::SelectedPoint>();
 
         app
-            // .add_plugins(MeshPickingPlugin)
             .add_systems(Startup, selection::create_marker)
-            .add_systems(Update, selection::update_selected_point);
+            .add_systems(Update, selection::update_selected_point)
+            .add_systems(Update, selection::update_cursor_position)
+            .add_systems(Startup, selection::create_cursor_position_text);
     }
 }
 
