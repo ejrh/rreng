@@ -12,6 +12,7 @@ pub struct Segment {
     pub length: f32,
     pub next_segment: Entity,
     pub prev_segment: Entity,
+    pub prev_length: f32,
 }
 
 pub fn update_points(
@@ -34,29 +35,28 @@ pub fn update_segments(
 ) {
     // TODO this is inefficient because:
     //  1. it builds the point-segment maps every frame
-    //  2. it checks all segments every frame even if they haven't changed
+    //  2. it processes all segments every frame even if they haven't changed
     //  it needs to do (2) because we need all segments (not just changed) for (1)
 
     let mut point_begins = HashMap::new();
     let mut point_ends = HashMap::new();
     for (seg_id, seg, _) in segments.iter() {
         point_begins.insert(seg.from_point, seg_id);
-        point_ends.insert(seg.to_point, seg_id);
+        point_ends.insert(seg.to_point, (seg_id, seg.length));
     }
 
     for (seg_id, mut seg, mut transform) in segments.iter_mut() {
-        if !seg.is_changed() {
-            continue;
-        }
+        // if !seg.is_changed() {
+        //     continue;
+        // }
         let pt1 = all_points.get(seg.from_point).unwrap();
         let pt2 = all_points.get(seg.to_point).unwrap();
         seg.length = pt1.translation.distance(pt2.translation);
 
-        seg.next_segment = *point_begins.get(&seg.to_point).unwrap_or(&seg_id);
-        seg.prev_segment = *point_ends.get(&seg.from_point).unwrap_or(&seg_id);
+        seg.next_segment = *point_begins.get(&seg.to_point).unwrap_or(&Entity::from_raw(0));
+        (seg.prev_segment, seg.prev_length) = *point_ends.get(&seg.from_point).unwrap_or(&(Entity::from_raw(0), seg.length));
 
         transform.translation = pt1.translation;
         transform.look_to(pt1.translation - pt2.translation, Vec3::Y);
-        info!("Updated segment position");
     }
 }

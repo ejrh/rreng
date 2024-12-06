@@ -103,7 +103,6 @@ pub fn update_track_meshes(
             Mesh3d(meshes.add(bed_mesh)),
             MeshMaterial3d(params.bed_material.clone()),
         )).set_parent(segment_id);
-        info!("Rendered segment");
     }
 }
 

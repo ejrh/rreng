@@ -57,6 +57,7 @@ pub fn create_track(
             length: 0.0,
             next_segment: Entity::from_raw(0),
             prev_segment: Entity::from_raw(0),
+            prev_length: 0.0,
         });
     }
 }
