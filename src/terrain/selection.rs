@@ -85,7 +85,7 @@ pub fn update_cursor_position(
     /* Update position text if it exists */
     if let Ok(mut text) = text_query.get_single_mut() {
         text.0 = format!(
-            "Cursor: {:3.0}, {:3.0}; elevation {:3.0}",
+            "Cursor: {:3.2}, {:3.2}; elevation {:3.2}",
             transform.translation.z, transform.translation.x, transform.translation.y
         );
     }
