@@ -41,11 +41,12 @@ pub fn update_train_position(
         *transform = Transform::default();
         transform.translation.z = car.segment_position;
         transform.translation.y += crate::track::TRACK_HEIGHT;
-        *transform = seg_transform.mul_transform(*transform);
 
         /* Fix up silly model transform */
         transform.scale = Vec3::splat(3.28084);
         transform.rotate(Quat::from_axis_angle(Vec3::Y, 54.0f32.to_radians()));
+
+        *transform = seg_transform.mul_transform(*transform);
     }
 }
 
