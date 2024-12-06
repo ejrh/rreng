@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+
 use crate::track::segment::Segment;
 
 const TRAIN_PATH: &str = "models/lowpoly_train.glb";
@@ -9,15 +10,38 @@ pub struct TrainCar {
     segment_position: f32,
 }
 
+pub fn move_train(
+    time: Res<Time>,
+    mut trains: Query<&mut TrainCar>,
+    segments: Query<&Segment, Without<TrainCar>>,
+) {
+    for mut car in trains.iter_mut() {
+        let segment = segments.get(car.segment_id).unwrap();
+        if segment.length == 0.0 { continue; }
+        car.segment_position += 5.0 * time.delta_secs();
+        if car.segment_position >= segment.length {
+            let next_segment = segment.next_segment;
+            if next_segment.index() != 0 {
+                car.segment_id = next_segment;
+                car.segment_position -= segment.length;
+                info!("moved onto next segment");
+            }
+        }
+    }
+}
+
 pub fn update_train_position(
     mut trains: Query<(&TrainCar, &mut Transform)>,
-    segments: Query<(&Segment, &Transform), Without<TrainCar>>,
+    segments: Query<&Transform, (With<Segment>, Without<TrainCar>)>,
 ) {
     for (car, mut transform) in trains.iter_mut() {
-        let (segment, seg_transform) = segments.get(car.segment_id).unwrap();
+        let Ok(seg_transform) = segments.get(car.segment_id)
+        else { continue; };
 
-        *transform = seg_transform.clone();
+        *transform = Transform::default();
+        transform.translation.z = car.segment_position;
         transform.translation.y += crate::track::TRACK_HEIGHT;
+        *transform = seg_transform.mul_transform(*transform);
 
         /* Fix up silly model transform */
         transform.scale = Vec3::splat(3.28084);
@@ -35,7 +59,7 @@ pub fn create_train(
     commands.spawn((
         TrainCar {
             segment_id: first_segment_id,
-            segment_position: 0.0,
+            segment_position: 10.0,
         },
         SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
     ));

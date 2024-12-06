@@ -55,6 +55,8 @@ pub fn create_track(
             from_point: *pt1,
             to_point: *pt2,
             length: 0.0,
+            next_segment: Entity::from_raw(0),
+            prev_segment: Entity::from_raw(0),
         });
     }
 }
