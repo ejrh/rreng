@@ -43,7 +43,8 @@ fn main() {
 
     // make some track and a train just for testing
     app.add_systems(Startup, track::create_track);
-    app.add_systems(Startup, train::create_train);
+    app.add_systems(Startup, train::create_train.after(track::create_track));
+    app.add_systems(Update, train::update_train_position);
 
     app.run();
 }
