@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
 use bevy::render::render_asset::RenderAssetUsages;
 
-use crate::track::Segment;
+use crate::track::segment::Segment;
 
 /**
  * Tracks are rendered with:
@@ -103,6 +103,7 @@ pub fn update_track_meshes(
             Mesh3d(meshes.add(bed_mesh)),
             MeshMaterial3d(params.bed_material.clone()),
         )).set_parent(segment_id);
+        info!("Rendered segment");
     }
 }
 
