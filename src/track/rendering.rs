@@ -24,11 +24,13 @@ pub struct TrackRenderParams {
     sleeper_dims: Vec3,
     sleeper_height: f32,
     sleeper_spacing: f32,
+    sleeper_mesh: Handle<Mesh>,
     bed_material: Handle<StandardMaterial>,
     bed_profile: Vec<Vec2>,
 }
 
 pub fn init_render_params(
+    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
@@ -49,6 +51,9 @@ pub fn init_render_params(
     let sleeper_height = 0.2;
     let sleeper_spacing = 0.7;
 
+    let sleeper_mesh = Cuboid::from_size(sleeper_dims);
+    let sleeper_mesh = meshes.add(sleeper_mesh.mesh());
+
     let mut bed_material = StandardMaterial::from(Color::srgb(0.6, 0.6, 0.5));
     bed_material.perceptual_roughness = 0.5;
 
@@ -65,6 +70,7 @@ pub fn init_render_params(
         sleeper_dims,
         sleeper_height,
         sleeper_spacing,
+        sleeper_mesh,
         bed_material: materials.add(bed_material),
         bed_profile: bed_profile.collect(),
     };
@@ -89,10 +95,9 @@ pub fn update_track_meshes(
         let num_sleepers = f32::round(segment.length / params.sleeper_spacing) as usize;
         let sleeper_offset = segment.length / (num_sleepers as f32);
         for i in 0..num_sleepers {
-            let sleeper_mesh = Cuboid::from_size(params.sleeper_dims);
             let sleeper_transform = Transform::from_xyz(0.0, params.sleeper_height + params.sleeper_dims.y/2.0, sleeper_offset * (i as f32 + 0.5));
             commands.spawn((
-                Mesh3d(meshes.add(sleeper_mesh.mesh())),
+                Mesh3d(params.sleeper_mesh.clone()),
                 MeshMaterial3d(params.sleeper_material.clone()),
                 sleeper_transform,
             )).set_parent(segment_id);
