@@ -30,6 +30,7 @@ pub struct TerrainRenderParams {
     parent_id: Entity,
     dirt_material: Handle<StandardMaterial>,
     grass_material: Handle<StandardMaterial>,
+    water_material: Handle<StandardMaterial>,
     high_res_cutoff: f32,
 }
 
@@ -53,10 +54,14 @@ pub fn init_render_params(
     let mut grass_material = StandardMaterial::from(Color::srgb(0.3, 0.6, 0.2));
     grass_material.perceptual_roughness = 0.75;
     grass_material.reflectance = 0.25;
+    let mut water_material = StandardMaterial::from(Color::srgb(0.25, 0.41, 0.88));
+    water_material.perceptual_roughness = 0.75;
+    water_material.reflectance = 0.25;
     let params = TerrainRenderParams {
         parent_id,
         dirt_material: materials.add(dirt_material),
         grass_material: materials.add(grass_material),
+        water_material: materials.add(water_material),
         high_res_cutoff: 1000.0,
     };
     commands.insert_resource(params);
@@ -127,6 +132,22 @@ pub fn update_meshes(
             ))
                 .remove::<Aabb>()
                 .set_parent(params.parent_id);
+
+            if matches!(layer, TerrainLayer::Elevation) {
+                let spacing = 1;
+                let elevation_view = elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
+                if elevation_view.iter().copied().reduce(f32::min).unwrap() <= 0.01f32 {
+                    let size = Vec3::new(64.0, 0.01, 64.0);
+                    let mesh: Mesh = Cuboid::from_size(size).into();
+                    let mesh = mesh.translated_by(size/2.0);
+                    commands.spawn((
+                        TerrainMesh { block_num: block_info.block_num },
+                        Mesh3d(meshes.add(mesh)),
+                        MeshMaterial3d(params.water_material.clone()),
+                        transform
+                   ));
+                }
+            }
         }
     }
 
