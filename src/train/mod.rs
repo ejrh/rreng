@@ -81,8 +81,8 @@ pub fn create_train(
     commands.spawn((
         TrainCar {
             segment_id: first_segment_id,
-            segment_position: 10.0,
-            speed: 0.0,
+            segment_position: 0.0,
+            speed: 0.001,
         },
         SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
     ));
