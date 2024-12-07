@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
+use crate::terrain::selection::SelectedPoint;
 use crate::terrain::Terrain;
 
 pub struct DebugPlugin;
@@ -28,7 +28,7 @@ impl Plugin for DebugPlugin {
         app
             .init_state::<DebugState>()
             .add_plugins(WorldInspectorPlugin::new().run_if(in_state(DebugState::On)))
-            .add_systems(Update, debug_terrain.run_if(in_state(DebugState::On)))
+            .add_systems(Update, (debug_terrain, log_click).run_if(in_state(DebugState::On)))
             .add_systems(Update, toggle_debug);
     }
 }
@@ -64,5 +64,17 @@ fn debug_terrain(
         let p1 = Vec3::new((i * terrain.block_size) as f32, 0.0, 0.0);
         let p2 = Vec3::new((i * terrain.block_size) as f32, 0.0, h);
         gizmos.line(p1, p2, Color::srgb(0.5, 0.5, 0.25));
+    }
+}
+
+pub fn log_click(
+    buttons: Res<ButtonInput<MouseButton>>,
+    selected_point: Res<SelectedPoint>,
+) {
+    let left = buttons.just_pressed(MouseButton::Left);
+    let right = buttons.just_pressed(MouseButton::Right);
+
+    if left || right {
+        info!("Clicked on {:?} ({}, {})", selected_point.point, left, right);
     }
 }
