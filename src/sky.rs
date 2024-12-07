@@ -20,8 +20,9 @@ struct Sun {
     period: f32,
 }
 
-const SUN_RADIUS: f32 = 700.0;
-const SUN_DISTANCE: f32 = 149000.0;
+const ASTRO_SCALE_FACTOR: f32 = 0.000_001;
+const SUN_RADIUS: f32 = 696_000_000.0 * ASTRO_SCALE_FACTOR;
+const SUN_DISTANCE: f32 = 149_600_000_000.0 * ASTRO_SCALE_FACTOR;
 const SUN_COLOUR: Color = Color::srgb(1.0, 1.0, 0.75);
 const INITIAL_SUN_ANGLE: f32 = TAU/8.0;
 const SUN_PERIOD: f32 = 3600.0;
@@ -72,7 +73,8 @@ fn move_sun(
     let (mut sun, mut transform) = sun_query.single_mut();
 
     sun.angle += TAU/sun.period * time.delta_secs();
-    transform.rotation = Quat::from_axis_angle(Vec3::Z, sun.angle);
+    let rounded_angle = (sun.angle.to_degrees() * 10.0).round().to_radians() * 0.1;
+    transform.rotation = Quat::from_axis_angle(Vec3::Z, rounded_angle);
     transform.translation = transform.rotation.mul_vec3(Vec3::new(SUN_DISTANCE, 0.0, 0.0));
 
     let altitude = transform.translation.y / SUN_DISTANCE;
