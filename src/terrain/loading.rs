@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::camera::CameraState;
 use crate::terrain::datafile::{DataFile, Track};
-use crate::terrain::Terrain;
+use crate::terrain::{Terrain, TerrainLayer};
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
 use crate::track::point::Point;
 use crate::track::segment::Segment;
@@ -14,12 +14,12 @@ use crate::train::TrainCar;
 pub struct LoadingState {
     tilesets_handle: Handle<TileSets>,
     datafile_handle: Handle<DataFile>,
-    elevation_handles: HashMap<Handle<ElevationFile>, Tile>,
+    elevation_handles: HashMap<Handle<ElevationFile>, (Tile, TerrainLayer)>,
     created_tracks: bool,
 }
 
 impl LoadingState {
-    fn get_tile(&self, asset_id: AssetId<ElevationFile>) -> Option<&Tile> {
+    fn get_tile(&self, asset_id: AssetId<ElevationFile>) -> Option<&(Tile, TerrainLayer)> {
         self.elevation_handles.iter()
             .find(|(h, _)| h.id() == asset_id)
             .map(|(_, tile)| tile)
@@ -72,8 +72,6 @@ pub fn check_loading_state(
     let Some(datafile) = datafile_assets.get(&loading_state.datafile_handle)
     else { return };
 
-    let tileset = tilesets.0.get("wgtn_1m_dem").unwrap();
-
     /* Reset the terrain parameters */
     info!("Level bounds are: {:?}", datafile.bounds);
 
@@ -81,21 +79,25 @@ pub fn check_loading_state(
 
     /* Process the data file and load the chunk elevations */
     let tilesets_path = asset_server.get_path(&loading_state.tilesets_handle).unwrap();
-    let tileset_path = tilesets_path.parent().unwrap().resolve(&tileset.root).unwrap();
+
     let mut new_elevation_handles = HashMap::new();
-    for (name, tile) in &tileset.files {
 
-        if terrain.bounds.intersect(tile.bounds).is_empty() {
-            continue;
-        }
+    for tileset in tilesets.0.values() {
+        let tileset_path = tilesets_path.parent().unwrap().resolve(&tileset.root).unwrap();
+        for (name, tile) in &tileset.files {
+            if terrain.bounds.intersect(tile.bounds).is_empty() {
+                continue;
+            }
 
-        let elevation_path = tileset_path.resolve(name).unwrap();
-        let handle = asset_server.load::<ElevationFile>(elevation_path);
-        if loading_state.elevation_handles.contains_key(&handle) {
-            continue;
+            let elevation_path = tileset_path.resolve(name).unwrap();
+            let handle = asset_server.load::<ElevationFile>(elevation_path);
+            if loading_state.elevation_handles.contains_key(&handle) {
+                continue;
+            }
+            new_elevation_handles.insert(handle, ((*tile).clone(), tileset.layer));
         }
-        new_elevation_handles.insert(handle, (*tile).clone());
     }
+
     if !new_elevation_handles.is_empty() {
         loading_state.elevation_handles.extend(new_elevation_handles);
     }
@@ -119,12 +121,12 @@ pub fn elevation_loaded(
 
             let elevation_file = assets.get(*id).unwrap();
 
-            let Some(tile) = loading_state.get_tile(*id)
+            let Some((tile, layer)) = loading_state.get_tile(*id)
             else { continue; };
 
             let tile_corner = Vec2::new(tile.bounds.min.x, tile.bounds.max.y);
             let offset = terrain.coord_to_offset(tile_corner);
-            terrain.set_elevation(offset, elevation_file.heights.view());
+            terrain.set_elevation(offset, elevation_file.heights.view(), *layer);
         }
     }
 }

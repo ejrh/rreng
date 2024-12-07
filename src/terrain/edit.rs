@@ -5,7 +5,7 @@ use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
 use ndarray::{Array2, Ix};
 
 use crate::terrain::selection::SelectedPoint;
-use crate::terrain::Terrain;
+use crate::terrain::{Terrain, TerrainLayer};
 use crate::terrain::utils::Range2;
 
 pub fn click_point(
@@ -13,6 +13,8 @@ pub fn click_point(
     selected_point: Res<SelectedPoint>,
     mut terrain: ResMut<Terrain>,
 ) {
+    let elevation = &mut terrain.layers[TerrainLayer::Elevation as usize];
+
     let left = buttons.pressed(MouseButton::Left);
     let right = buttons.pressed(MouseButton::Right);
 
@@ -21,14 +23,14 @@ pub fn click_point(
     let row = selected_point.point.z as Ix;
     let col = selected_point.point.x as Ix;
 
-    if row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+    if row >= elevation.dim().0 || col >= elevation.dim().1 {
         return;
     }
 
-    if left && !right { terrain.elevation[(row, col)] += 1.0; }
-    if right && !left { terrain.elevation[(row, col)] -= 1.0; }
+    if left && !right { elevation[(row, col)] += 1.0; }
+    if right && !left { elevation[(row, col)] -= 1.0; }
 
-    let range = propagate(row, col, &mut terrain.elevation);
+    let range = propagate(row, col, elevation);
 
     terrain.dirty_range(range);
 }
@@ -40,9 +42,13 @@ pub fn drag_point(
     mut start_point: Local<SelectedPoint>,
     mut gizmos: Gizmos,
 ) {
+    let elevation = &mut terrain.layers[TerrainLayer::Elevation as usize];
+
     if buttons.just_pressed(MouseButton::Left) {
         start_point.point = selected_point.point;
     }
+
+    let mut ranges_to_dirty = Vec::new();
 
     if buttons.pressed(MouseButton::Left) {
         gizmos.arrow(start_point.point, selected_point.point, Color::srgb(1.0, 0.1, 0.1));
@@ -50,16 +56,16 @@ pub fn drag_point(
         let row = start_point.point.z as Ix;
         let col = start_point.point.x as Ix;
 
-        if row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+        if row >= elevation.dim().0 || col >= elevation.dim().1 {
             return;
         }
 
-        let start_h = terrain.elevation[(row, col)];
+        let start_h = elevation[(row, col)];
 
         let row = selected_point.point.z as Ix;
         let col = selected_point.point.x as Ix;
 
-        if row >= terrain.elevation.dim().0 || col >= terrain.elevation.dim().1 {
+        if row >= elevation.dim().0 || col >= elevation.dim().1 {
             return;
         }
 
@@ -70,12 +76,15 @@ pub fn drag_point(
             let row = point.z as Ix;
             let col = point.x as Ix;
 
-            terrain.elevation[(row, col)] = start_h;
+            elevation[(row, col)] = start_h;
 
-            let range = propagate(row, col, &mut terrain.elevation);
-
-            terrain.dirty_range(range);
+            let range = propagate(row, col, elevation);
+            ranges_to_dirty.push(range);
         }
+    }
+
+    for range in ranges_to_dirty {
+        terrain.dirty_range(range);
     }
 }
 

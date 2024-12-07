@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use ndarray::s;
-
+use serde::{Deserialize, Serialize};
 use crate::terrain::datafile::DataFile;
 use crate::terrain::utils::{get_copyable_range, Range2};
 
@@ -63,12 +63,18 @@ impl Plugin for TerrainPlugin {
     }
 }
 
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TerrainLayer {
+    Elevation,
+    Structure,
+    MAX
+}
+
 #[derive(Default, Debug)]
 pub struct BlockInfo {
     pub block_num: (usize, usize),
     pub range: Range2,
     pub dirty: bool,
-    pub mesh_entity: Option<Entity>,
 }
 
 #[derive(Default, Debug, Resource)]
@@ -78,7 +84,8 @@ pub struct Terrain {
     pub block_size: usize,
     pub resolution: Vec3,
     pub num_blocks: [usize; 2],
-    pub elevation: ndarray::Array2<f32>,
+    pub point_dims: [usize; 2],
+    pub layers: [ndarray::Array2<f32>; TerrainLayer::MAX as usize],
     pub block_info: ndarray::Array2<BlockInfo>,
 }
 
@@ -89,28 +96,29 @@ impl Terrain {
         self.block_size = 64;
         self.resolution = Vec3::new(1.0, 1.0, 1.0);
         self.num_blocks = [datafile.size[0] / self.block_size, datafile.size[1] / self.block_size];
-        let point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
-        self.elevation = ndarray::Array2::default(point_dims);
+        self.point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
+        for i in 0..TerrainLayer::MAX as usize {
+            self.layers[i] = ndarray::Array2::default(self.point_dims);
+        }
         self.block_info = ndarray::Array2::from_shape_fn(self.num_blocks, |(r, c)| BlockInfo {
             block_num: (r, c),
             range: Range2(r * self.block_size..(r+1) * self.block_size + 1, c * self.block_size..(c+1) * self.block_size + 1),
             dirty: false,
-            mesh_entity: None,
         });
     }
 
-    pub fn set_elevation(&mut self, offset: (isize, isize), data: ndarray::ArrayView2<f32>) {
+    pub fn set_elevation(&mut self, offset: (isize, isize), data: ndarray::ArrayView2<f32>, layer: TerrainLayer) {
+        let target_layer = &mut self.layers[layer as usize];
         let data_dims = data.dim();
-        let point_dims = self.elevation.dim();
-        let (from_rows, to_rows) = get_copyable_range(data_dims.0, offset.0, point_dims.0);
-        let (from_cols, to_cols) = get_copyable_range(data_dims.1, offset.1, point_dims.1);
+        let (from_rows, to_rows) = get_copyable_range(data_dims.0, offset.0, self.point_dims[0]);
+        let (from_cols, to_cols) = get_copyable_range(data_dims.1, offset.1, self.point_dims[1]);
 
         if from_rows.is_empty() || from_cols.is_empty() { return; }
 
         let data_range = Range2(to_rows.clone(), to_cols.clone());
 
         let src = data.slice(s!(from_rows, from_cols));
-        let mut dest = self.elevation.slice_mut(s!(to_rows, to_cols));
+        let mut dest = target_layer.slice_mut(s!(to_rows, to_cols));
         dest.assign(&src);
 
         for i in 0..self.num_blocks[0] {
@@ -140,8 +148,10 @@ impl Terrain {
         let r = point.y as usize;
         let c = point.x as usize;
 
-        if r < self.elevation.dim().0 && c < self.elevation.dim().1 {
-            self.elevation[(r, c)]
+        let elevation = &self.layers[TerrainLayer::Elevation as usize];
+
+        if r < elevation.dim().0 && c < elevation.dim().1 {
+            elevation[(r, c)]
         } else {
             -1.0
         }

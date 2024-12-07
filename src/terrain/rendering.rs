@@ -9,7 +9,7 @@ use ndarray::s;
 
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
-use crate::terrain::Terrain;
+use crate::terrain::{Terrain, TerrainLayer};
 
 #[derive(Component)]
 pub struct TerrainMesh {
@@ -28,6 +28,7 @@ const RENDERS_PER_FRAME: usize = 10;
 #[derive(Resource)]
 pub struct TerrainRenderParams {
     parent_id: Entity,
+    dirt_material: Handle<StandardMaterial>,
     grass_material: Handle<StandardMaterial>,
     high_res_cutoff: f32,
 }
@@ -46,11 +47,15 @@ pub fn init_render_params(
             Transform::default()
         )).id();
 
+    let mut dirt_material = StandardMaterial::from(Color::srgb(0.51, 0.25, 0.03));
+    dirt_material.perceptual_roughness = 0.5;
+    dirt_material.reflectance = 0.1;
     let mut grass_material = StandardMaterial::from(Color::srgb(0.3, 0.6, 0.2));
     grass_material.perceptual_roughness = 0.75;
     grass_material.reflectance = 0.25;
     let params = TerrainRenderParams {
         parent_id,
+        dirt_material: materials.add(dirt_material),
         grass_material: materials.add(grass_material),
         high_res_cutoff: 1000.0,
     };
@@ -64,7 +69,7 @@ pub fn update_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    /* Explicitly borrow the object so we can simultaneously borrow different fields  of it later */
+    /* Explicitly borrow the object so we can simultaneously borrow different fields of it later */
     let terrain = &mut *terrain;
 
     for block_info in terrain.block_info.iter_mut()
@@ -72,58 +77,66 @@ pub fn update_meshes(
         .take(RENDERS_PER_FRAME) {
         block_info.dirty = false;
 
-        let entity = block_info.mesh_entity
-            .filter(|e| terrain_meshes.contains(*e))
-            .unwrap_or_else(|| {
-            let entity = commands
-                .spawn(TerrainMesh { block_num: block_info.block_num })
-                .set_parent(params.parent_id)
-                .id();
-            block_info.mesh_entity = Some(entity);
-            entity
-        });
+        for (e, tm) in terrain_meshes.iter() {
+            if tm.block_num == block_info.block_num {
+                commands.entity(e).despawn_recursive();
+            }
+        }
 
-        let high_res = {
-            let threshold = 0.1;
-            let spacing = 1;
-            let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
-            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
-        };
+        for layer in [TerrainLayer::Elevation, TerrainLayer::Structure] {
+            let elevation = &terrain.layers[layer as usize];
 
-        let low_res = {
-            let threshold = 0.5;
-            let spacing = 1;
-            let elevation_view = terrain.elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
-            meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
-        };
+            let (layer_height_adjust, layer_material) = match layer {
+                TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
+                TerrainLayer::Structure => (-1.0, params.grass_material.clone()),
+                _ => panic!()
+            };
 
-        let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
-        let yp = block_info.block_num.0 as f32 * terrain.block_size as f32;
-        let transform = Transform::from_xyz(xp, 0.0, yp);
+            let high_res = {
+                let threshold = 0.1;
+                let spacing = 1;
+                let elevation_view = elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
+                meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
+            };
 
-        let mesh = low_res.clone();
+            let low_res = {
+                let threshold = 0.5;
+                let spacing = 1;
+                let elevation_view = elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
+                meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
+            };
 
-        let alternates = TerrainMeshAlternates {
-            cutoff: params.high_res_cutoff,
-            high_res,
-            low_res,
-        };
+            let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
+            let yp = block_info.block_num.0 as f32 * terrain.block_size as f32;
+            let transform = Transform::from_xyz(xp, layer_height_adjust, yp);
 
-        commands.entity(entity).insert((
-            Mesh3d(mesh),
-            MeshMaterial3d(params.grass_material.clone()),
-            transform,
-            alternates,
-        )).remove::<Aabb>();
+            let mesh = low_res.clone();
+
+            let alternates = TerrainMeshAlternates {
+                cutoff: params.high_res_cutoff,
+                high_res,
+                low_res,
+            };
+
+            commands.spawn((
+                TerrainMesh { block_num: block_info.block_num },
+                Mesh3d(mesh),
+                MeshMaterial3d(layer_material),
+                transform,
+                alternates,
+            ))
+                .remove::<Aabb>()
+                .set_parent(params.parent_id);
+        }
     }
 
     /* Clean up orphaned terrain meshes */
-    for (entity, terrain_mesh) in terrain_meshes.iter() {
-        let block_info = &terrain.block_info[terrain_mesh.block_num];
-        if block_info.mesh_entity != Some(entity) {
-            commands.entity(entity).despawn();
-        }
-    }
+    // for (entity, terrain_mesh) in terrain_meshes.iter() {
+    //     let block_info = &terrain.block_info[terrain_mesh.block_num];
+    //     if block_info.mesh_entity != Some(entity) {
+    //         commands.entity(entity).despawn();
+    //     }
+    // }
 }
 
 pub fn swap_mesh_alternates(

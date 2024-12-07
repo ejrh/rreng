@@ -8,6 +8,7 @@ use bevy::prelude::TypePath;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tiff::decoder::DecodingResult;
+use crate::terrain::TerrainLayer;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Tile {
@@ -19,6 +20,7 @@ pub struct TileSet {
     pub chunk_dimensions: (usize, usize),
     pub root: String,
     pub pattern: String,
+    pub layer: TerrainLayer,
     pub files: HashMap<String, Tile>,
 }
 
