@@ -175,6 +175,8 @@ fn create_initial_tracks(
                 segment_id: first_segment_id,
                 segment_position: 0.0,
                 speed: 0.001,
+                acceleration: 1.0,
+                max_speed: 100_000.0 / 3600.0,
             },
             SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
         ));

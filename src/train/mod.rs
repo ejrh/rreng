@@ -7,6 +7,8 @@ pub struct TrainCar {
     pub segment_id: Entity,
     pub segment_position: f32,
     pub speed: f32,
+    pub acceleration: f32,
+    pub max_speed: f32,
 }
 
 pub fn move_train(
@@ -20,10 +22,10 @@ pub fn move_train(
 
         if segment.length == 0.0 { continue; }
 
-        if car.speed < 0.0 && car.speed >= -10.0 {
-            car.speed -= 0.1 * time.delta_secs();
-        } else if car.speed > 0.0 && car.speed <= 10.0 {
-            car.speed += 0.1 * time.delta_secs();
+        if car.speed < 0.0 && car.speed >= -car.max_speed {
+            car.speed -= car.acceleration * time.delta_secs();
+        } else if car.speed > 0.0 && car.speed <= car.max_speed {
+            car.speed += car.acceleration * time.delta_secs();
         }
 
         car.segment_position += car.speed * time.delta_secs();
