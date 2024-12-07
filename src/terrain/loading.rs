@@ -3,9 +3,12 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::camera::CameraState;
-use crate::terrain::datafile::DataFile;
+use crate::terrain::datafile::{DataFile, Track};
 use crate::terrain::Terrain;
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
+use crate::track::point::Point;
+use crate::track::segment::Segment;
+use crate::train::TrainCar;
 
 #[derive(Debug, Default, Resource)]
 pub struct LoadingState {
@@ -60,6 +63,7 @@ pub fn check_loading_state(
     datafile_assets: Res<Assets<DataFile>>,
     tilesets_assets: Res<Assets<TileSets>>,
     asset_server: Res<AssetServer>,
+    mut commands: Commands,
 ) {
     let Some(tilesets) = tilesets_assets.get(&loading_state.tilesets_handle)
     else { return };
@@ -94,6 +98,8 @@ pub fn check_loading_state(
     if !new_elevation_handles.is_empty() {
         loading_state.elevation_handles.extend(new_elevation_handles);
     }
+
+    create_initial_tracks(datafile, &asset_server, &mut commands);
 }
 
 pub fn elevation_loaded(
@@ -131,5 +137,39 @@ pub fn set_camera_range(
     if let Ok(mut camera_state) = camera_query.get_single_mut() {
         camera_state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
         camera_state.distance_range = 1.0..xrange.max(zrange);
+    }
+}
+
+fn create_initial_tracks(
+    datafile: &DataFile,
+    asset_server: &AssetServer,
+    commands: &mut Commands
+) {
+    /* Create existing tracks */
+    for (_name, Track {points }) in datafile.tracks.iter() {
+        let point_ids = points.iter()
+            .map(|pt| commands.spawn((Point, Transform::from_translation(*pt))).id())
+            .collect::<Vec<_>>();
+
+        let first_segment_id = point_ids.windows(2).map(|w| {
+            let [pt1, pt2, ..] = w else { panic!("Expect window of size 2") };
+            commands.spawn(Segment {
+                from_point: *pt1,
+                to_point: *pt2,
+                length: 0.0,
+            }).id()
+        }).collect::<Vec<_>>()[0];
+
+        /* Put a train at the start of the first segment */
+        const TRAIN_PATH: &str = "models/lowpoly_train.glb";
+
+        commands.spawn((
+            TrainCar {
+                segment_id: first_segment_id,
+                segment_position: 0.0,
+                speed: 0.001,
+            },
+            SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
+        ));
     }
 }

@@ -36,15 +36,11 @@ fn main() {
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)
         .add_systems(Startup, utils::show_help_text)
-        .add_systems(Update, utils::fix_apparent_size);
+        .add_systems(Update, utils::fix_apparent_size)
+        .add_systems(Update, (train::move_train, train::update_train_position));
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, utils::close_on_esc);
-
-    // make some track and a train just for testing
-    app.add_systems(Startup, track::create_track);
-    app.add_systems(Startup, train::create_train.after(track::create_track));
-    app.add_systems(Update, (train::move_train, train::update_train_position));
 
     app.run();
 }

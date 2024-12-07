@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use bevy::asset::{Asset, AssetLoader, AsyncReadExt, LoadContext};
 use bevy::asset::io::Reader;
 use bevy::prelude::*;
@@ -6,10 +7,16 @@ use thiserror::Error;
 
 use crate::terrain::tiles::TileSets;
 
+#[derive(Clone, Debug, Default, Deserialize)]
+pub struct Track {
+    pub points: Vec<Vec3>,
+}
+
 #[derive(Asset, Clone, Debug, Default, Deserialize, TypePath)]
 pub struct DataFile {
     pub bounds: Rect,
     pub size: [usize; 2],
+    pub tracks: HashMap<String, Track>,
 }
 
 #[non_exhaustive]

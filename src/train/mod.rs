@@ -2,13 +2,11 @@ use bevy::prelude::*;
 
 use crate::track::segment::{Segment, SegmentLinkage};
 
-const TRAIN_PATH: &str = "models/lowpoly_train.glb";
-
 #[derive(Component)]
 pub struct TrainCar {
-    segment_id: Entity,
-    segment_position: f32,
-    speed: f32,
+    pub segment_id: Entity,
+    pub segment_position: f32,
+    pub speed: f32,
 }
 
 pub fn move_train(
@@ -17,7 +15,9 @@ pub fn move_train(
     segments: Query<(&Segment, &SegmentLinkage), Without<TrainCar>>,
 ) {
     for mut car in trains.iter_mut() {
-        let (segment, linkage) = segments.get(car.segment_id).unwrap();
+        let Ok((segment, linkage)) = segments.get(car.segment_id)
+        else { continue };
+
         if segment.length == 0.0 { continue; }
 
         if car.speed < 0.0 && car.speed >= -10.0 {
@@ -69,21 +69,4 @@ pub fn update_train_position(
 
         *transform = seg_transform.mul_transform(*transform);
     }
-}
-
-pub fn create_train(
-    asset_server: Res<AssetServer>,
-    all_segments: Query<Entity, With<Segment>>,
-    mut commands: Commands,
-) {
-    let first_segment_id = all_segments.iter().next().unwrap();
-
-    commands.spawn((
-        TrainCar {
-            segment_id: first_segment_id,
-            segment_position: 0.0,
-            speed: 0.001,
-        },
-        SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
-    ));
 }
