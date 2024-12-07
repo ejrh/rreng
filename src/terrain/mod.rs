@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use bevy::prelude::*;
 use ndarray::s;
 use serde::{Deserialize, Serialize};
@@ -51,8 +52,7 @@ impl Plugin for TerrainPlugin {
             .add_systems(Update, loading::elevation_loaded)
             .add_systems(Update, loading::check_loading_state.run_if(resource_changed::<loading::LoadingState>))
             .add_systems(Update, loading::set_camera_range)
-            .add_systems(Update, rendering::update_meshes)
-            .add_systems(Update, rendering::swap_mesh_alternates)
+            .add_systems(Update, (rendering::update_meshes, rendering::swap_mesh_alternates, rendering::handle_mesh_tasks))
             .init_resource::<selection::SelectedPoint>();
 
         app
@@ -85,7 +85,7 @@ pub struct Terrain {
     pub resolution: Vec3,
     pub num_blocks: [usize; 2],
     pub point_dims: [usize; 2],
-    pub layers: [ndarray::Array2<f32>; TerrainLayer::MAX as usize],
+    pub layers: [Arc<Mutex<ndarray::Array2<f32>>>; TerrainLayer::MAX as usize],
     pub block_info: ndarray::Array2<BlockInfo>,
 }
 
@@ -98,7 +98,7 @@ impl Terrain {
         self.num_blocks = [datafile.size[0] / self.block_size, datafile.size[1] / self.block_size];
         self.point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
         for i in 0..TerrainLayer::MAX as usize {
-            self.layers[i] = ndarray::Array2::default(self.point_dims);
+            self.layers[i] = Arc::new(Mutex::new(ndarray::Array2::default(self.point_dims)));
         }
         self.block_info = ndarray::Array2::from_shape_fn(self.num_blocks, |(r, c)| BlockInfo {
             block_num: (r, c),
@@ -109,6 +109,8 @@ impl Terrain {
 
     pub fn set_elevation(&mut self, offset: (isize, isize), data: ndarray::ArrayView2<f32>, layer: TerrainLayer) {
         let target_layer = &mut self.layers[layer as usize];
+        let mut target_layer = target_layer.lock().unwrap();
+
         let data_dims = data.dim();
         let (from_rows, to_rows) = get_copyable_range(data_dims.0, offset.0, self.point_dims[0]);
         let (from_cols, to_cols) = get_copyable_range(data_dims.1, offset.1, self.point_dims[1]);
@@ -149,6 +151,7 @@ impl Terrain {
         let c = point.x as usize;
 
         let elevation = &self.layers[TerrainLayer::Elevation as usize];
+        let elevation = elevation.lock().unwrap();
 
         if r < elevation.dim().0 && c < elevation.dim().1 {
             elevation[(r, c)]

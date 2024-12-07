@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Range2(pub Range<usize>, pub Range<usize>);
 
 impl Range2 {

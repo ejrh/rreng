@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::ops::DerefMut;
 
 use bevy::input::ButtonInput;
 use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
@@ -13,7 +14,9 @@ pub fn click_point(
     selected_point: Res<SelectedPoint>,
     mut terrain: ResMut<Terrain>,
 ) {
-    let elevation = &mut terrain.layers[TerrainLayer::Elevation as usize];
+    let elevation = &terrain.layers[TerrainLayer::Elevation as usize];
+    let mut _guard = elevation.lock().unwrap();
+    let elevation = _guard.deref_mut();
 
     let left = buttons.pressed(MouseButton::Left);
     let right = buttons.pressed(MouseButton::Right);
@@ -32,6 +35,8 @@ pub fn click_point(
 
     let range = propagate(row, col, elevation);
 
+    drop(_guard);
+
     terrain.dirty_range(range);
 }
 
@@ -42,7 +47,9 @@ pub fn drag_point(
     mut start_point: Local<SelectedPoint>,
     mut gizmos: Gizmos,
 ) {
-    let elevation = &mut terrain.layers[TerrainLayer::Elevation as usize];
+    let elevation = &terrain.layers[TerrainLayer::Elevation as usize];
+    let mut _guard = elevation.lock().unwrap();
+    let elevation = _guard.deref_mut();
 
     if buttons.just_pressed(MouseButton::Left) {
         start_point.point = selected_point.point;
@@ -82,6 +89,8 @@ pub fn drag_point(
             ranges_to_dirty.push(range);
         }
     }
+
+    drop(_guard);
 
     for range in ranges_to_dirty {
         terrain.dirty_range(range);

@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use bevy::{
     prelude::*,
     render::{
@@ -5,11 +7,14 @@ use bevy::{
         primitives::Aabb,
         render_asset::RenderAssetUsages
 }};
-use ndarray::s;
+use bevy::tasks::{block_on, AsyncComputeTaskPool, Task};
+use bevy::tasks::futures_lite::future;
+use ndarray::{s, Array2};
 
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
 use crate::terrain::{Terrain, TerrainLayer};
+use crate::terrain::utils::Range2;
 
 #[derive(Component)]
 pub struct TerrainMesh {
@@ -97,19 +102,8 @@ pub fn update_meshes(
                 _ => panic!()
             };
 
-            let high_res = {
-                let threshold = 0.1;
-                let spacing = 1;
-                let elevation_view = elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
-                meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
-            };
-
-            let low_res = {
-                let threshold = 0.5;
-                let spacing = 1;
-                let elevation_view = elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
-                meshes.add(create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold))
-            };
+            let high_res = queue_mesh_task(0.1, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut commands);
+            let low_res = queue_mesh_task(0.5, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut commands);
 
             let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
             let yp = block_info.block_num.0 as f32 * terrain.block_size as f32;
@@ -135,6 +129,8 @@ pub fn update_meshes(
 
             if matches!(layer, TerrainLayer::Elevation) {
                 let spacing = 1;
+                let _guard = elevation.lock().unwrap();
+                let elevation = &*_guard;
                 let elevation_view = elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
                 if elevation_view.iter().copied().reduce(f32::min).unwrap() <= 0.01f32 {
                     let size = Vec3::new(64.0, 0.01, 64.0);
@@ -208,5 +204,37 @@ fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> 
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, pos);
         mesh.compute_flat_normals();
         mesh
+    }
+}
+
+#[derive(Component)]
+pub struct MeshTask(Handle<Mesh>, Task<Mesh>);
+
+fn queue_mesh_task(threshold: f32, spacing: i32, data: Arc<Mutex<Array2<f32>>>, range: Range2, meshes: &mut Assets<Mesh>, commands: &mut Commands) -> Handle<Mesh> {
+    let handle = meshes.reserve_handle();
+
+    let thread_pool = AsyncComputeTaskPool::get();
+
+    let task = thread_pool.spawn(async move {
+        let data = data.lock().unwrap();
+        let elevation_view = data.slice(s!(range.0.clone();spacing, range.1.clone();spacing));
+        create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold)
+    });
+
+    commands.spawn(MeshTask(handle.clone(), task));
+
+    handle
+}
+
+pub fn handle_mesh_tasks(
+    mut transform_tasks: Query<(Entity, &mut MeshTask)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut commands: Commands,
+) {
+    for (e, mut mt) in &mut transform_tasks {
+        if let Some(mesh) = block_on(future::poll_once(&mut mt.1)) {
+            meshes.insert(mt.0.id(), mesh);
+            commands.entity(e).despawn();
+        }
     }
 }
