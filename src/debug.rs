@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use crate::terrain::selection::SelectedPoint;
 use crate::terrain::Terrain;
+use crate::track::point::Point;
 
 pub struct DebugPlugin;
 
@@ -29,7 +30,7 @@ impl Plugin for DebugPlugin {
             .init_state::<DebugState>()
             .add_plugins(WorldInspectorPlugin::new().run_if(in_state(DebugState::On)))
             .add_systems(Update, (debug_terrain, log_click).run_if(in_state(DebugState::On)))
-            .add_systems(Update, toggle_debug);
+            .add_systems(Update, (toggle_debug, point_visibility));
     }
 }
 
@@ -76,5 +77,21 @@ pub fn log_click(
 
     if left || right {
         info!("Clicked on {:?} ({}, {})", selected_point.point, left, right);
+    }
+}
+
+fn point_visibility(
+    current_state: Res<State<DebugState>>,
+    mut point_visibility: Query<&mut Visibility, With<Point>>
+) {
+    let vis = match current_state.get() {
+        DebugState::On => Visibility::Inherited,
+        DebugState::Off => Visibility::Hidden,
+    };
+
+    for mut pv in point_visibility.iter_mut() {
+        if vis != *pv {
+            *pv = vis;
+        }
     }
 }
