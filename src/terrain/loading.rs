@@ -15,6 +15,7 @@ pub struct LoadingState {
     tilesets_handle: Handle<TileSets>,
     datafile_handle: Handle<DataFile>,
     elevation_handles: HashMap<Handle<ElevationFile>, Tile>,
+    created_tracks: bool,
 }
 
 impl LoadingState {
@@ -99,7 +100,10 @@ pub fn check_loading_state(
         loading_state.elevation_handles.extend(new_elevation_handles);
     }
 
-    create_initial_tracks(datafile, &asset_server, &mut commands);
+    if !loading_state.created_tracks {
+        create_initial_tracks(datafile, &asset_server, &mut commands);
+        loading_state.created_tracks = true;
+    }
 }
 
 pub fn elevation_loaded(
@@ -151,17 +155,20 @@ fn create_initial_tracks(
             .map(|pt| commands.spawn((Point, Transform::from_translation(*pt))).id())
             .collect::<Vec<_>>();
 
-        let first_segment_id = point_ids.windows(2).map(|w| {
+        let segment_ids: Vec<_> = point_ids.windows(2).map(|w| {
             let [pt1, pt2, ..] = w else { panic!("Expect window of size 2") };
             commands.spawn(Segment {
                 from_point: *pt1,
                 to_point: *pt2,
                 length: 0.0,
             }).id()
-        }).collect::<Vec<_>>()[0];
+        }).collect();
+        info!("created track with {} segments", segment_ids.len());
 
         /* Put a train at the start of the first segment */
         const TRAIN_PATH: &str = "models/lowpoly_train.glb";
+
+        let first_segment_id = segment_ids[0];
 
         commands.spawn((
             TrainCar {
@@ -171,5 +178,6 @@ fn create_initial_tracks(
             },
             SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
         ));
+        info!("created train");
     }
 }
