@@ -152,9 +152,16 @@ fn create_initial_tracks(
     commands: &mut Commands
 ) {
     /* Create existing tracks */
-    for (_name, Track {points }) in datafile.tracks.iter() {
+    for (name, Track {points }) in datafile.tracks.iter() {
+        let parent_id = commands
+            .spawn((
+                Name::new(format!("Track:{name}")),
+                Visibility::default(),
+                Transform::default()
+            )).id();
+
         let point_ids = points.iter()
-            .map(|pt| commands.spawn((Point, Transform::from_translation(*pt))).id())
+            .map(|pt| commands.spawn((Point, Transform::from_translation(*pt))).set_parent(parent_id).id())
             .collect::<Vec<_>>();
 
         let segment_ids: Vec<_> = point_ids.windows(2).map(|w| {
@@ -163,7 +170,7 @@ fn create_initial_tracks(
                 from_point: *pt1,
                 to_point: *pt2,
                 length: 0.0,
-            }).id()
+            }).set_parent(parent_id).id()
         }).collect();
         info!("created track with {} segments", segment_ids.len());
 
@@ -173,6 +180,7 @@ fn create_initial_tracks(
         let first_segment_id = segment_ids[0];
 
         commands.spawn((
+            Name::new("Train"),
             TrainCar {
                 segment_id: first_segment_id,
                 segment_position: 0.0,

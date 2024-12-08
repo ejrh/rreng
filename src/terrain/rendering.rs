@@ -39,16 +39,13 @@ pub struct TerrainRenderParams {
     high_res_cutoff: f32,
 }
 
-#[derive(Component)]
-struct TerrainParent;
-
 pub fn init_render_params(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
     let parent_id = commands
         .spawn((
-            TerrainParent,
+            Name::new("Terrain"),
             Visibility::default(),
             Transform::default()
         )).id();
@@ -141,7 +138,7 @@ pub fn update_meshes(
                         Mesh3d(meshes.add(mesh)),
                         MeshMaterial3d(params.water_material.clone()),
                         transform
-                   ));
+                   )).set_parent(params.parent_id);
                 }
             }
         }

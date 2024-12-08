@@ -43,6 +43,7 @@ fn create_lights(
 
     commands
         .spawn((
+            Name::new("Sun"),
             Sun {
                 angle: INITIAL_SUN_ANGLE,
                 period: SUN_PERIOD,
