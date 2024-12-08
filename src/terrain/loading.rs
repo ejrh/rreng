@@ -179,7 +179,7 @@ fn create_initial_tracks(
 
         let first_segment_id = segment_ids[0];
 
-        commands.spawn((
+        let train_id = commands.spawn((
             Name::new("Train"),
             TrainCar {
                 segment_id: first_segment_id,
@@ -188,8 +188,33 @@ fn create_initial_tracks(
                 acceleration: 1.0,
                 max_speed: 100_000.0 / 3600.0,
             },
-            SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
-        ));
+            Transform::default(),
+            Visibility::default(),
+        )).id();
         info!("created train");
+
+        /* Spawn train model and fix up its silly model transform */
+        commands.spawn((
+            SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset(TRAIN_PATH))),
+            Transform::default()
+                .with_scale(Vec3::splat(3.28084))
+                .with_rotation(Quat::from_axis_angle(Vec3::Y, 54.0f32.to_radians())),
+        )).set_parent(train_id);
+
+        /* Put some spot lights for the train's headlamps */
+        const LIGHT_POSITION: Vec3 = Vec3::new(0.85, 1.7, 9.3);
+        for (xs, zs) in [
+            (-1.0, -1.0),
+            (-1.0, 1.0),
+            (1.0, -1.0),
+            (1.0, 1.0),
+        ] {
+            let pos = LIGHT_POSITION * Vec3::new(xs, 1.0, zs);
+            let target = (LIGHT_POSITION + Vec3::new(0.0, 0.0, 10.0)) * Vec3::new(xs, 1.0, zs);
+            commands.spawn((
+                SpotLight::default(),
+                Transform::from_translation(pos).looking_at(target, Vec3::Y),
+            )).set_parent(train_id);
+        }
     }
 }

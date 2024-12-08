@@ -29,7 +29,7 @@ impl Plugin for DebugPlugin {
         app
             .init_state::<DebugState>()
             .add_plugins(WorldInspectorPlugin::new().run_if(in_state(DebugState::On)))
-            .add_systems(Update, (debug_terrain, log_click).run_if(in_state(DebugState::On)))
+            .add_systems(Update, (debug_terrain, log_click, show_lights).run_if(in_state(DebugState::On)))
             .add_systems(Update, (toggle_debug, point_visibility));
     }
 }
@@ -93,5 +93,16 @@ fn point_visibility(
         if vis != *pv {
             *pv = vis;
         }
+    }
+}
+
+fn show_lights(
+    spot_lights: Query<(&SpotLight, &GlobalTransform)>,
+    mut gizmos: Gizmos,
+) {
+    for (_light, transform) in spot_lights.iter() {
+        let from_point = transform.translation();
+        let to_point = transform.transform_point(Vec3::new(0.0, 0.0, -2.0));
+        gizmos.arrow(from_point, to_point, Color::srgb(1.0, 1.0, 0.0));
     }
 }
