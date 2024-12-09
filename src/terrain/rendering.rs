@@ -1,3 +1,4 @@
+use std::mem::take;
 use std::sync::{Arc, Mutex};
 
 use bevy::{
@@ -39,6 +40,11 @@ pub struct TerrainRenderParams {
     high_res_cutoff: f32,
 }
 
+pub struct MeshTask(Handle<Mesh>, Task<Mesh>);
+
+#[derive(Default, Resource)]
+pub struct MeshTaskQueue(Vec<MeshTask>);
+
 pub fn init_render_params(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
@@ -74,6 +80,7 @@ pub fn update_meshes(
     params: Res<TerrainRenderParams>,
     terrain_meshes: Query<(Entity, &TerrainMesh)>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut mesh_task_queue: ResMut<MeshTaskQueue>,
     mut commands: Commands,
 ) {
     /* Explicitly borrow the object so we can simultaneously borrow different fields of it later */
@@ -99,8 +106,8 @@ pub fn update_meshes(
                 _ => panic!()
             };
 
-            let high_res = queue_mesh_task(0.1, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut commands);
-            let low_res = queue_mesh_task(0.5, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut commands);
+            let high_res = queue_mesh_task(0.1, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut mesh_task_queue.0);
+            let low_res = queue_mesh_task(0.5, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut mesh_task_queue.0);
 
             let xp = block_info.block_num.1 as f32 * terrain.block_size as f32;
             let yp = block_info.block_num.0 as f32 * terrain.block_size as f32;
@@ -204,10 +211,7 @@ fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> 
     }
 }
 
-#[derive(Component)]
-pub struct MeshTask(Handle<Mesh>, Task<Mesh>);
-
-fn queue_mesh_task(threshold: f32, spacing: i32, data: Arc<Mutex<Array2<f32>>>, range: Range2, meshes: &mut Assets<Mesh>, commands: &mut Commands) -> Handle<Mesh> {
+fn queue_mesh_task(threshold: f32, spacing: i32, data: Arc<Mutex<Array2<f32>>>, range: Range2, meshes: &mut Assets<Mesh>, queue: &mut Vec<MeshTask>) -> Handle<Mesh> {
     let handle = meshes.reserve_handle();
 
     let thread_pool = AsyncComputeTaskPool::get();
@@ -218,20 +222,24 @@ fn queue_mesh_task(threshold: f32, spacing: i32, data: Arc<Mutex<Array2<f32>>>, 
         create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold)
     });
 
-    commands.spawn(MeshTask(handle.clone(), task));
+    queue.push(MeshTask(handle.clone(), task));
 
     handle
 }
 
 pub fn handle_mesh_tasks(
-    mut transform_tasks: Query<(Entity, &mut MeshTask)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut commands: Commands,
+    mut mesh_task_queue: ResMut<MeshTaskQueue>,
 ) {
-    for (e, mut mt) in &mut transform_tasks {
+    if mesh_task_queue.0.is_empty() { return; }
+
+    let old_queue = take(&mut mesh_task_queue.0);
+
+    for mut mt in old_queue {
         if let Some(mesh) = block_on(future::poll_once(&mut mt.1)) {
             meshes.insert(mt.0.id(), mesh);
-            commands.entity(e).despawn();
+        } else {
+            mesh_task_queue.0.push(mt);
         }
     }
 }
