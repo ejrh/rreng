@@ -70,18 +70,11 @@ pub fn show_help_text(
 }
 
 pub fn close_on_esc(
-    mut commands: Commands,
-    focused_windows: Query<(Entity, &Window)>,
     input: Res<ButtonInput<KeyCode>>,
+    mut app_exit_events: EventWriter<AppExit>,
 ) {
-    for (window, focus) in focused_windows.iter() {
-        if !focus.focused {
-            continue;
-        }
-
-        if input.just_pressed(KeyCode::Escape) {
-            commands.entity(window).despawn();
-        }
+    if input.just_pressed(KeyCode::Escape) {
+        app_exit_events.send(AppExit::Success);
     }
 }
 
