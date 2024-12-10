@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use crate::terrain::selection::SelectedPoint;
 use crate::terrain::Terrain;
-use crate::track::point::Point;
+use crate::track::point::{Point, PointAngle};
 
 pub struct DebugPlugin;
 
@@ -29,7 +29,7 @@ impl Plugin for DebugPlugin {
         app
             .init_state::<DebugState>()
             .add_plugins(WorldInspectorPlugin::new().run_if(in_state(DebugState::On)))
-            .add_systems(Update, (debug_terrain, log_click, show_lights).run_if(in_state(DebugState::On)))
+            .add_systems(Update, (debug_terrain, log_click, show_points, show_lights).run_if(in_state(DebugState::On)))
             .add_systems(Update, (toggle_debug, point_visibility));
     }
 }
@@ -93,6 +93,18 @@ fn point_visibility(
         if vis != *pv {
             *pv = vis;
         }
+    }
+}
+
+fn show_points(
+    points: Query<(&Transform, &PointAngle)>,
+    mut gizmos: Gizmos,
+) {
+    for (transform, point_angle) in points.iter() {
+        let from_point = transform.translation;
+        let to_point = from_point + point_angle.angle;
+        gizmos.arrow(from_point, to_point, Color::srgb(0.0, 1.0, 0.0));
+        gizmos.circle(Isometry3d::new(from_point, Quat::from_rotation_arc(Vec3::Z, point_angle.angle)), 2.0, Color::srgb(0.0, 1.0, 0.0));
     }
 }
 

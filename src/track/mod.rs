@@ -23,6 +23,7 @@ impl Plugin for TrackPlugin {
             .add_systems(Startup, rendering::init_render_params)
             .add_systems(Update, (segment::update_points, segment::update_segments, segment::update_segment_linkage).chain())
             .add_systems(Update, point::render_points)
+            .add_systems(Update, point::update_point_angles)
             .add_systems(Update, rendering::update_track_meshes);
     }
 }

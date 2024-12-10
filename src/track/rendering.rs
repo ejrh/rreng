@@ -95,22 +95,22 @@ pub fn update_track_meshes(
             MeshMaterial3d(params.rail_material.clone()),
         )).set_parent(segment_id);
 
-        let num_sleepers = f32::round(segment.length / params.sleeper_spacing) as usize;
-        let sleeper_offset = segment.length / (num_sleepers as f32);
-        for i in 0..num_sleepers {
-            let sleeper_transform = Transform::from_xyz(0.0, params.sleeper_height + params.sleeper_dims.y/2.0, sleeper_offset * (i as f32 + 0.5));
-            commands.spawn((
-                Mesh3d(params.sleeper_mesh.clone()),
-                MeshMaterial3d(params.sleeper_material.clone()),
-                sleeper_transform,
-            )).set_parent(segment_id);
-        }
-
-        let bed_mesh = create_bed_mesh(&params, segment.length, open_start, open_end);
-        commands.spawn((
-            Mesh3d(meshes.add(bed_mesh)),
-            MeshMaterial3d(params.bed_material.clone()),
-        )).set_parent(segment_id);
+        // let num_sleepers = f32::round(segment.length / params.sleeper_spacing) as usize;
+        // let sleeper_offset = segment.length / (num_sleepers as f32);
+        // for i in 0..num_sleepers {
+        //     let sleeper_transform = Transform::from_xyz(0.0, params.sleeper_height + params.sleeper_dims.y/2.0, sleeper_offset * (i as f32 + 0.5));
+        //     commands.spawn((
+        //         Mesh3d(params.sleeper_mesh.clone()),
+        //         MeshMaterial3d(params.sleeper_material.clone()),
+        //         sleeper_transform,
+        //     )).set_parent(segment_id);
+        // }
+        //
+        // let bed_mesh = create_bed_mesh(&params, segment.length, open_start, open_end);
+        // commands.spawn((
+        //     Mesh3d(meshes.add(bed_mesh)),
+        //     MeshMaterial3d(params.bed_material.clone()),
+        // )).set_parent(segment_id);
     }
 }
 
