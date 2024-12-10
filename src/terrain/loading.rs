@@ -140,9 +140,11 @@ pub fn set_camera_range(
     let yrange = 1000.0;
     let zrange = (terrain.num_blocks[0] * terrain.block_size) as f32;
 
-    if let Ok(mut camera_state) = camera_query.get_single_mut() {
-        camera_state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
-        camera_state.distance_range = 1.0..xrange.max(zrange);
+    if let Ok(mut state) = camera_query.get_single_mut() {
+        state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
+        state.focus = state.focus_range.start + state.focus_range.end / 2.0;
+        state.distance_range = 1.0..xrange.max(zrange).max(1.0);
+        state.distance = state.distance_range.end;
     }
 }
 

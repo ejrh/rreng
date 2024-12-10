@@ -50,8 +50,8 @@ impl Plugin for TerrainPlugin {
             .add_systems(Update, loading::tilesets_loaded)
             .add_systems(Update, loading::datafile_loaded)
             .add_systems(Update, loading::elevation_loaded)
-            .add_systems(Update, loading::check_loading_state.run_if(resource_changed::<loading::LoadingState>))
-            .add_systems(Update, loading::set_camera_range)
+            .add_systems(Update, (loading::check_loading_state, loading::set_camera_range)
+                .run_if(resource_changed::<loading::LoadingState>))
             .init_resource::<rendering::MeshTaskQueue>()
             .add_systems(Update, (rendering::update_meshes, rendering::swap_mesh_alternates, rendering::handle_mesh_tasks))
             .init_resource::<selection::SelectedPoint>();
