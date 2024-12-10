@@ -1,7 +1,10 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+
 use bevy::prelude::*;
 use ndarray::s;
 use serde::{Deserialize, Serialize};
+
 use crate::terrain::datafile::DataFile;
 use crate::terrain::utils::{get_copyable_range, Range2};
 
@@ -68,7 +71,6 @@ impl Plugin for TerrainPlugin {
 pub enum TerrainLayer {
     Elevation,
     Structure,
-    MAX
 }
 
 #[derive(Default, Debug)]
@@ -86,7 +88,7 @@ pub struct Terrain {
     pub resolution: Vec3,
     pub num_blocks: [usize; 2],
     pub point_dims: [usize; 2],
-    pub layers: [Arc<Mutex<ndarray::Array2<f32>>>; TerrainLayer::MAX as usize],
+    pub layers: HashMap<TerrainLayer, Arc<Mutex<ndarray::Array2<f32>>>>,
     pub block_info: ndarray::Array2<BlockInfo>,
 }
 
@@ -98,8 +100,8 @@ impl Terrain {
         self.resolution = Vec3::new(1.0, 1.0, 1.0);
         self.num_blocks = [datafile.size[0] / self.block_size, datafile.size[1] / self.block_size];
         self.point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
-        for i in 0..TerrainLayer::MAX as usize {
-            self.layers[i] = Arc::new(Mutex::new(ndarray::Array2::default(self.point_dims)));
+        for layer in &datafile.layers {
+            self.layers.insert(*layer, Arc::new(Mutex::new(ndarray::Array2::default(self.point_dims))));
         }
         self.block_info = ndarray::Array2::from_shape_fn(self.num_blocks, |(r, c)| BlockInfo {
             block_num: (r, c),
@@ -109,7 +111,7 @@ impl Terrain {
     }
 
     pub fn set_elevation(&mut self, offset: (isize, isize), data: ndarray::ArrayView2<f32>, layer: TerrainLayer) {
-        let target_layer = &mut self.layers[layer as usize];
+        let target_layer = &self.layers[&layer];
         let mut target_layer = target_layer.lock().unwrap();
 
         let data_dims = data.dim();
@@ -151,7 +153,11 @@ impl Terrain {
         let r = point.y as usize;
         let c = point.x as usize;
 
-        let elevation = &self.layers[TerrainLayer::Elevation as usize];
+        if !self.layers.contains_key(&TerrainLayer::Elevation) {
+            return -1.0;
+        }
+
+        let elevation = &self.layers[&TerrainLayer::Elevation];
         let elevation = elevation.lock().unwrap();
 
         if r < elevation.dim().0 && c < elevation.dim().1 {

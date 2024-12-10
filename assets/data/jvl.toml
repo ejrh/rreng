@@ -1,4 +1,5 @@
 size = [2880, 3840]
+layers = ["Elevation", "Structure"]
 
 # Notes:
 # Size is in points [rows, cols]

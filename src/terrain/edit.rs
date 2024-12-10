@@ -14,7 +14,7 @@ pub fn click_point(
     selected_point: Res<SelectedPoint>,
     mut terrain: ResMut<Terrain>,
 ) {
-    let elevation = &terrain.layers[TerrainLayer::Elevation as usize];
+    let elevation = &terrain.layers[&TerrainLayer::Elevation];
     let mut _guard = elevation.lock().unwrap();
     let elevation = _guard.deref_mut();
 
@@ -47,7 +47,7 @@ pub fn drag_point(
     mut start_point: Local<SelectedPoint>,
     mut gizmos: Gizmos,
 ) {
-    let elevation = &terrain.layers[TerrainLayer::Elevation as usize];
+    let elevation = &terrain.layers[&TerrainLayer::Elevation];
     let mut _guard = elevation.lock().unwrap();
     let elevation = _guard.deref_mut();
 

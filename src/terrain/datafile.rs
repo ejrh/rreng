@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use serde::Deserialize;
 use thiserror::Error;
 
+use crate::terrain::TerrainLayer;
 use crate::terrain::tiles::TileSets;
 
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -14,8 +15,9 @@ pub struct Track {
 
 #[derive(Asset, Clone, Debug, Default, Deserialize, TypePath)]
 pub struct DataFile {
-    pub bounds: Rect,
     pub size: [usize; 2],
+    pub layers: Vec<TerrainLayer>,
+    pub bounds: Rect,
     pub tracks: HashMap<String, Track>,
 }
 

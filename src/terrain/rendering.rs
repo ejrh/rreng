@@ -97,13 +97,10 @@ pub fn update_meshes(
             }
         }
 
-        for layer in [TerrainLayer::Elevation, TerrainLayer::Structure] {
-            let elevation = &terrain.layers[layer as usize];
-
+        for (layer, elevation) in &terrain.layers {
             let (layer_height_adjust, layer_material) = match layer {
                 TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
                 TerrainLayer::Structure => (-1.0, params.grass_material.clone()),
-                _ => panic!()
             };
 
             let high_res = queue_mesh_task(0.1, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut mesh_task_queue.0);

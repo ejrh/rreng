@@ -83,6 +83,10 @@ pub fn check_loading_state(
     let mut new_elevation_handles = HashMap::new();
 
     for tileset in tilesets.0.values() {
+        if !datafile.layers.contains(&tileset.layer) {
+            continue;
+        }
+
         let tileset_path = tilesets_path.parent().unwrap().resolve(&tileset.root).unwrap();
         for (name, tile) in &tileset.files {
             if terrain.bounds.intersect(tile.bounds).is_empty() {
