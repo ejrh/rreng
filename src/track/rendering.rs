@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::render::mesh::PrimitiveTopology;
 use bevy::render::render_asset::RenderAssetUsages;
 
-use crate::track::segment::Segment;
+use crate::track::segment::{Segment, SegmentLinkage};
 
 /**
  * Tracks are rendered with:
@@ -78,15 +78,18 @@ pub fn init_render_params(
 }
 
 pub fn update_track_meshes(
-    segments: Query<(Entity, &Segment), Changed<Segment>>,
+    segments: Query<(Entity, &Segment, &SegmentLinkage), Changed<Segment>>,
     params: Res<TrackRenderParams>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (segment_id, segment) in segments.iter() {
+    for (segment_id, segment, linkage) in segments.iter() {
         commands.entity(segment_id).despawn_descendants();
 
-        let rail_mesh = create_rail_mesh(&params, segment.length, false, false);
+        let open_start = linkage.prev_segment.is_some();
+        let open_end = linkage.next_segment.is_some();
+
+        let rail_mesh = create_rail_mesh(&params, segment.length, open_start, open_end);
         commands.spawn((
             Mesh3d(meshes.add(rail_mesh)),
             MeshMaterial3d(params.rail_material.clone()),
@@ -103,7 +106,7 @@ pub fn update_track_meshes(
             )).set_parent(segment_id);
         }
 
-        let bed_mesh = create_bed_mesh(&params, segment.length, false, false);
+        let bed_mesh = create_bed_mesh(&params, segment.length, open_start, open_end);
         commands.spawn((
             Mesh3d(meshes.add(bed_mesh)),
             MeshMaterial3d(params.bed_material.clone()),
