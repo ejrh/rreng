@@ -1,11 +1,11 @@
 use bevy::asset::Assets;
 use bevy::color::{Color, LinearRgba};
 use bevy::pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver, StandardMaterial};
-use bevy::prelude::{Changed, Commands, Component, Entity, Mesh, Mesh3d, Query, ResMut, Sphere};
+use bevy::prelude::{Changed, Commands, Component, Entity, Mesh, Mesh3d, Query, Reflect, ResMut, Sphere};
 
 use crate::utils::ConstantApparentSize;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Point;
 
 pub fn render_points(

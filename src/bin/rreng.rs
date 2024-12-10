@@ -37,6 +37,7 @@ fn main() {
         .add_systems(Startup, utils::show_version)
         .add_systems(Startup, utils::show_help_text)
         .add_systems(Update, utils::fix_apparent_size)
+        .register_type::<train::TrainCar>()
         .add_systems(Update, (train::move_train, train::update_train_position));
 
     #[cfg(not(target_arch = "wasm32"))]

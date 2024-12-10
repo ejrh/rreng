@@ -14,6 +14,7 @@ pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app
+            .register_type::<CameraState>()
             .add_systems(Startup, create_camera)
             .add_systems(Startup, create_camera_position_text)
             .add_systems(Update, camera_movement)
@@ -21,14 +22,14 @@ impl Plugin for CameraPlugin {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct CameraState {
-    focus: Vec3,
-    yaw: f32,
-    pitch: f32,
-    distance: f32,
+    pub focus: Vec3,
+    pub yaw: f32,
+    pub pitch: f32,
+    pub distance: f32,
     pub focus_range: Range<Vec3>,
-    pitch_range: Range<f32>,
+    pub pitch_range: Range<f32>,
     pub distance_range: Range<f32>,
 }
 

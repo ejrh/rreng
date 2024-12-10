@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use bevy::log::info;
-use bevy::prelude::{Changed, Component, DetectChanges, DetectChangesMut, Entity, Query, Ref, Transform, Vec3, Visibility, With, Without};
+use bevy::prelude::{Changed, Component, DetectChanges, DetectChangesMut, Entity, Query, Ref, Reflect, Transform, Vec3, Visibility, With, Without};
 
 use crate::track::point::Point;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 #[require(SegmentLinkage, Transform, Visibility)]
 pub struct Segment {
     pub from_point: Entity,
@@ -12,7 +12,7 @@ pub struct Segment {
     pub length: f32,
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
 pub struct SegmentLinkage {
     pub next_segment: Option<Entity>,
     pub prev_segment: Option<(Entity, f32)>,

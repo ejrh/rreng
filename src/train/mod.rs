@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::track::segment::{Segment, SegmentLinkage};
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct TrainCar {
     pub segment_id: Entity,
     pub segment_position: f32,

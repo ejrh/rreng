@@ -17,6 +17,9 @@ pub struct TrackPlugin;
 impl Plugin for TrackPlugin {
     fn build(&self, app: &mut App) {
         app
+            .register_type::<point::Point>()
+            .register_type::<segment::Segment>()
+            .register_type::<segment::SegmentLinkage>()
             .add_systems(Startup, rendering::init_render_params)
             .add_systems(Update, (segment::update_points, segment::update_segments, segment::update_segment_linkage).chain())
             .add_systems(Update, point::render_points)
