@@ -13,7 +13,7 @@ use crate::train::TrainCar;
 #[derive(Debug, Default, Resource)]
 pub struct LoadingState {
     tilesets_handle: Handle<TileSets>,
-    datafile_handle: Handle<DataFile>,
+    pub datafile_handle: Handle<DataFile>,
     elevation_handles: HashMap<Handle<ElevationFile>, (Tile, TerrainLayer)>,
     created_tracks: bool,
 }
@@ -31,7 +31,11 @@ pub fn load_initial_terrain(
     asset_server: Res<AssetServer>,
 ) {
     loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.toml");
-    loading_state.datafile_handle = asset_server.load::<DataFile>("data/jvl.toml");
+    match loading_state.datafile_handle.id() {
+        AssetId::Uuid { uuid } if uuid == AssetId::<DataFile>::DEFAULT_UUID =>
+            loading_state.datafile_handle = asset_server.load::<DataFile>("data/jvl.toml"),
+        _ => (),
+    };
 }
 
 pub fn tilesets_loaded(
