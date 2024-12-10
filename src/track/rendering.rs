@@ -1,7 +1,7 @@
 use std::f32::consts::TAU;
 
 use bevy::prelude::*;
-use bevy::render::mesh::PrimitiveTopology;
+use bevy::render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::render::render_asset::RenderAssetUsages;
 
 use crate::track::segment::{Segment, SegmentLinkage};
@@ -51,8 +51,8 @@ pub fn init_render_params(
     let sleeper_height = 0.2;
     let sleeper_spacing = 0.7;
 
-    let sleeper_mesh = Cuboid::from_size(sleeper_dims);
-    let sleeper_mesh = meshes.add(sleeper_mesh.mesh());
+    let sleeper_mesh = create_sleeper_mesh(sleeper_dims);
+    let sleeper_mesh = meshes.add(sleeper_mesh);
 
     let mut bed_material = StandardMaterial::from(Color::srgb(0.6, 0.6, 0.5));
     bed_material.perceptual_roughness = 0.5;
@@ -206,6 +206,24 @@ fn create_bed_mesh(params: &TrackRenderParams, length: f32, open_start: bool, op
     if !open_end {
         mesh.merge(&polygon(&bed_profile.vertices)
             .translated_by(Vec3::new(0.0, 0.0, length)));
+    }
+
+    mesh
+}
+
+fn create_sleeper_mesh(sleeper_dims: Vec3) -> Mesh {
+    let mut mesh: Mesh = Cuboid::from_size(sleeper_dims).into();
+
+    /* Remove bottom face */
+    if let Some(VertexAttributeValues::Float32x3(pos)) = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION) {
+        pos.truncate(30);
+    }
+    if let Some(VertexAttributeValues::Float32x3(norm)) = mesh.attribute_mut(Mesh::ATTRIBUTE_NORMAL) {
+        norm.truncate(30);
+    }
+    mesh.remove_attribute(Mesh::ATTRIBUTE_UV_0);
+    if let Some(Indices::U32(inds)) = mesh.indices_mut() {
+        inds.truncate(30);
     }
 
     mesh
