@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::mem::take;
 use std::sync::{Arc, Mutex};
 
@@ -33,7 +34,7 @@ const RENDERS_PER_FRAME: usize = 10;
 
 #[derive(Resource)]
 pub struct TerrainRenderParams {
-    parent_id: Entity,
+    parent_id: HashMap<TerrainLayer, Entity>,
     dirt_material: Handle<StandardMaterial>,
     grass_material: Handle<StandardMaterial>,
     water_material: Handle<StandardMaterial>,
@@ -49,13 +50,6 @@ pub fn init_render_params(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut commands: Commands,
 ) {
-    let parent_id = commands
-        .spawn((
-            Name::new("Terrain"),
-            Visibility::default(),
-            Transform::default()
-        )).id();
-
     let mut dirt_material = StandardMaterial::from(Color::srgb(0.51, 0.25, 0.03));
     dirt_material.perceptual_roughness = 0.5;
     dirt_material.reflectance = 0.1;
@@ -66,7 +60,7 @@ pub fn init_render_params(
     water_material.perceptual_roughness = 0.75;
     water_material.reflectance = 0.25;
     let params = TerrainRenderParams {
-        parent_id,
+        parent_id: HashMap::new(),
         dirt_material: materials.add(dirt_material),
         grass_material: materials.add(grass_material),
         water_material: materials.add(water_material),
@@ -77,7 +71,7 @@ pub fn init_render_params(
 
 pub fn update_meshes(
     mut terrain: ResMut<Terrain>,
-    params: Res<TerrainRenderParams>,
+    mut params: ResMut<TerrainRenderParams>,
     terrain_meshes: Query<(Entity, &TerrainMesh)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
@@ -98,6 +92,13 @@ pub fn update_meshes(
         }
 
         for (layer, elevation) in &terrain.layers {
+            let parent_id = *params.parent_id.entry(*layer).or_insert_with(||
+                 commands.spawn((
+                     Name::new(format!("Terrain:{:?}", layer)),
+                     Visibility::default(),
+                     Transform::default()
+                 )).id());
+
             let (layer_height_adjust, layer_material) = match layer {
                 TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
                 TerrainLayer::Structure => (-1.0, params.grass_material.clone()),
@@ -126,7 +127,7 @@ pub fn update_meshes(
                 alternates,
             ))
                 .remove::<Aabb>()
-                .set_parent(params.parent_id);
+                .set_parent(parent_id);
 
             if matches!(layer, TerrainLayer::Elevation) {
                 let spacing = 1;
@@ -142,7 +143,7 @@ pub fn update_meshes(
                         Mesh3d(meshes.add(mesh)),
                         MeshMaterial3d(params.water_material.clone()),
                         transform
-                   )).set_parent(params.parent_id);
+                   )).set_parent(parent_id);
                 }
             }
         }
