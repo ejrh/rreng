@@ -2,6 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
 use crate::terrain::selection::SelectedPoint;
 use crate::terrain::Terrain;
 use crate::track::point::Point;
@@ -29,7 +30,7 @@ impl Plugin for DebugPlugin {
         app
             .init_state::<DebugState>()
             .add_plugins(WorldInspectorPlugin::new().run_if(in_state(DebugState::On)))
-            .add_systems(Update, (debug_terrain, log_click, show_lights).run_if(in_state(DebugState::On)))
+            .add_systems(Update, (debug_terrain, log_click, show_points, show_lights).run_if(in_state(DebugState::On)))
             .add_systems(Update, (toggle_debug, point_visibility));
     }
 }
@@ -93,6 +94,21 @@ fn point_visibility(
         if vis != *pv {
             *pv = vis;
         }
+    }
+}
+
+fn show_points(
+    points: Query<&Transform, With<Point>>,
+    mut gizmos: Gizmos,
+) {
+    for transform in points.iter() {
+        let from_point = transform.translation;
+        let to_point = from_point + transform.forward().as_vec3();
+        gizmos.arrow(from_point, to_point, Color::srgb(0.0, 1.0, 0.0));
+        let pos = transform.to_isometry();
+        gizmos.circle(pos, 2.0, Color::srgb(0.0, 1.0, 0.0));
+        gizmos.circle(pos, 1.5, Color::srgb(0.0, 1.0, 0.0));
+        gizmos.circle(pos, 1.0, Color::srgb(0.0, 1.0, 0.0));
     }
 }
 
