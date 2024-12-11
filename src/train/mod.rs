@@ -9,6 +9,7 @@ pub struct TrainCar {
     pub speed: f32,
     pub acceleration: f32,
     pub max_speed: f32,
+    pub length: f32,
 }
 
 pub fn move_train(
@@ -55,16 +56,37 @@ pub fn move_train(
 
 pub fn update_train_position(
     mut trains: Query<(&TrainCar, &mut Transform)>,
-    segments: Query<&Transform, (With<Segment>, Without<TrainCar>)>,
+    segments: Query<(&Segment, &SegmentLinkage, &Transform), Without<TrainCar>>,
 ) {
     for (car, mut transform) in trains.iter_mut() {
-        let Ok(seg_transform) = segments.get(car.segment_id)
+        let Ok((seg, linkage, seg_transform)) = segments.get(car.segment_id)
         else { continue; };
+
+        let p1 = car.length / 2.0;
+        let p2 = seg.length - car.length / 2.0;
 
         *transform = Transform::default();
         transform.translation.z = car.segment_position;
         transform.translation.y += crate::track::TRACK_HEIGHT;
 
         *transform = seg_transform.mul_transform(*transform);
+
+        if linkage.next_segment.is_some() && car.segment_position > p2 {
+            let Ok((_, _, next_seg_transform)) = segments.get(linkage.next_segment.unwrap())
+            else { continue; };
+
+            let mix = (car.segment_position - p2) / (seg.length - p2);
+
+            transform.rotation = seg_transform.rotation.lerp(next_seg_transform.rotation, mix/2.0);
+        }
+
+        if linkage.prev_segment.is_some() && car.segment_position < p1 {
+            let Ok((_, _, prev_seg_transform)) = segments.get(linkage.prev_segment.unwrap().0)
+            else { continue; };
+
+            let mix = 1.0 - car.segment_position / p1;
+
+            transform.rotation = seg_transform.rotation.lerp(prev_seg_transform.rotation, mix/2.0);
+        }
     }
 }

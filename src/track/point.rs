@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+
 use bevy::asset::Assets;
 use bevy::color::{Color, LinearRgba};
+use bevy::math::Vec3;
 use bevy::pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver, StandardMaterial};
-use bevy::prelude::{Changed, Commands, Component, Entity, Mesh, Mesh3d, Query, Reflect, ResMut, Sphere};
+use bevy::prelude::{Changed, Commands, Component, Entity, Mesh, Mesh3d, Quat, Query, Reflect, ResMut, Sphere, Transform, With, Without};
 
+use crate::track::segment::Segment;
 use crate::utils::ConstantApparentSize;
 
 #[derive(Component, Reflect)]
@@ -25,5 +29,25 @@ pub fn render_points(
             NotShadowCaster,
             NotShadowReceiver,
         ));
+    }
+}
+
+pub fn update_point_angles(
+    mut points: Query<(Entity, &mut Transform), With<Point>>,
+    segments: Query<(&Segment, &Transform), Without<Point>>,
+) {
+    let mut angles = HashMap::new();
+    for (id, _) in points.iter_mut() {
+        angles.insert(id, Vec3::default());
+    }
+
+    for (segment, seg_transform) in segments.iter() {
+        *(angles.get_mut(&segment.to_point).unwrap()) += seg_transform.forward().as_vec3();
+        *(angles.get_mut(&segment.from_point).unwrap()) += seg_transform.forward().as_vec3();
+    }
+
+    for (id, mut transform) in points.iter_mut() {
+        let angle = angles[&id].normalize();
+        transform.rotation = Quat::from_rotation_arc(Vec3::Z, angle);
     }
 }
