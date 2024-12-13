@@ -1,9 +1,8 @@
-use std::f32::consts::TAU;
-
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::render::render_asset::RenderAssetUsages;
 
+use crate::track::point::Point;
 use crate::track::segment::{Segment, SegmentLinkage};
 
 /**
@@ -78,18 +77,29 @@ pub fn init_render_params(
 }
 
 pub fn update_track_meshes(
-    segments: Query<(Entity, &Segment, &SegmentLinkage), Changed<Segment>>,
+    segments: Query<(Entity, &Segment, &SegmentLinkage, &Transform)>,
+    points: Query<&Transform, With<Point>>,
     params: Res<TrackRenderParams>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (segment_id, segment, linkage) in segments.iter() {
+    for (segment_id, segment, linkage, segment_transform) in segments.iter() {
         commands.entity(segment_id).despawn_descendants();
 
         let open_start = linkage.prev_segment.is_some();
         let open_end = linkage.next_segment.is_some();
 
-        let rail_mesh = create_rail_mesh(&params, segment.length, open_start, open_end);
+        let point_transform = points.get(segment.from_point).unwrap();
+        let mut transform = Transform::from_rotation(segment_transform.rotation);
+        transform.rotate(point_transform.rotation.inverse());
+        let start_normal = transform.forward().as_vec3();
+
+        let point_transform = points.get(segment.to_point).unwrap();
+        let mut transform = Transform::from_rotation(segment_transform.rotation);
+        transform.rotate(point_transform.rotation.inverse());
+        let end_normal = transform.forward().as_vec3();
+
+        let rail_mesh = create_rail_mesh(&params, segment.length, open_start, open_end, start_normal, end_normal);
         commands.spawn((
             Mesh3d(meshes.add(rail_mesh)),
             MeshMaterial3d(params.rail_material.clone()),
@@ -106,7 +116,7 @@ pub fn update_track_meshes(
             )).set_parent(segment_id);
         }
 
-        let bed_mesh = create_bed_mesh(&params, segment.length, open_start, open_end);
+        let bed_mesh = create_bed_mesh(&params, segment.length, open_start, open_end, start_normal, end_normal);
         commands.spawn((
             Mesh3d(meshes.add(bed_mesh)),
             MeshMaterial3d(params.bed_material.clone()),
@@ -114,101 +124,78 @@ pub fn update_track_meshes(
     }
 }
 
-fn create_rail_mesh(params: &TrackRenderParams, length: f32, open_start: bool, open_end: bool) -> Mesh {
+fn create_rail_mesh(params: &TrackRenderParams, length: f32, open_start: bool, open_end: bool, start_normal: Vec3, end_normal: Vec3) -> Mesh {
     const GAUGE: f32 = 1.435;
 
-    let lateral_step = Vec3::new(GAUGE/2.0, 0.0, 0.0);
-
     let rail_profile = BoxedPolyline2d::new(params.rail_profile.clone());
-    let mut mesh = open_extrusion(&rail_profile.vertices, length).translated_by(lateral_step);
+    let verts: Vec<_> = rail_profile.vertices.iter().map(|pt| Vec2::new(pt.x + GAUGE/2.0, pt.y + params.rail_height)).collect::<Vec<_>>();
+    let mut mesh = extrusion(&verts, length, open_start, open_end, start_normal, end_normal);
 
-    mesh.merge(&open_extrusion(&rail_profile.vertices, length).translated_by(-lateral_step));
-
-    if !open_start {
-        mesh.merge(&polygon(&rail_profile.vertices)
-            .rotated_by(Quat::from_axis_angle(Vec3::Y, TAU/2.0))
-            .translated_by(lateral_step));
-        mesh.merge(&polygon(&rail_profile.vertices)
-            .rotated_by(Quat::from_axis_angle(Vec3::Y, TAU/2.0))
-            .translated_by(-lateral_step));
-    }
-    if !open_end {
-        mesh.merge(&polygon(&rail_profile.vertices)
-            .translated_by(Vec3::new(0.0, 0.0, length))
-            .translated_by(lateral_step));
-        mesh.merge(&polygon(&rail_profile.vertices)
-            .translated_by(Vec3::new(0.0, 0.0, length))
-            .translated_by(-lateral_step));
-    }
-
-    mesh.translate_by(Vec3::new(0.0, params.rail_height, 0.0));
+    let verts: Vec<_> = rail_profile.vertices.iter().map(|pt| Vec2::new(pt.x - GAUGE/2.0, pt.y + params.rail_height)).collect::<Vec<_>>();
+    mesh.merge(&extrusion(&verts, length, open_start, open_end, start_normal, end_normal));
 
     mesh
 }
 
-fn open_extrusion(profile: &[Vec2], length: f32) -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+/**
+ * Project a 2D point onto a plane represented by a normal vector.
+ * The origin is assumed to be in the plane.
+ *
+ * Adapted from https://stackoverflow.com/a/53437900, but slightly
+ * simplified as our rays are always in the direction of Z, and we
+ * assume they are never parallel to the plane.
+ */
+fn project_point(point: Vec2, plane_normal: Vec3) -> Vec3 {
+    let ray = Vec3::new(point.x, point.y, 0.0);
+    let ray_dest = Vec3::new(0.0, 0.0, 1.0);
+    let t = plane_normal.dot(ray) / plane_normal.dot(ray_dest);
+    ray + t * ray_dest
+}
+
+fn extrusion(profile: &[Vec2], length: f32, open_start: bool, open_end: bool, start_normal: Vec3, end_normal: Vec3) -> Mesh {
+    /* Transform points to be cut according to the plane normal at each end */
+    let start_points: Vec<_> = profile.iter().map(|pt| project_point(*pt, start_normal)).collect();
+    let end_points: Vec<_> = profile.iter().map(|pt| project_point(*pt, end_normal) + length * Vec3::Z).collect();
 
     let mut tris = Vec::new();
+    for i in 0..start_points.len() - 1 {
+        let start0 = start_points[i];
+        let start1 = start_points[i + 1];
+        let end0 = end_points[i];
+        let end1 = end_points[i + 1];
 
-    let z = length;
-
-    for points in profile.windows(2) {
-        let pt1 = points[0];
-        let pt2 = points[1];
-
-        tris.extend([
-            Vec3::new(pt1.x, pt1.y, 0.0),
-            Vec3::new(pt1.x, pt1.y, z),
-            Vec3::new(pt2.x, pt2.y, 0.0),
-        ]);
-        tris.extend([
-            Vec3::new(pt2.x, pt2.y, 0.0),
-            Vec3::new(pt1.x, pt1.y, z),
-            Vec3::new(pt2.x, pt2.y, z),
-        ]);
+        tris.extend([start0, end0, start1]);
+        tris.extend([start1, end0, end1]);
     }
 
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, tris);
-    mesh.compute_flat_normals();
-
-    mesh
-}
-
-fn polygon(profile: &[Vec2]) -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
-
+    /* Close ends if necessary */
+    // TODO the triangulation could be done once at startup for each polygon
     let floats: Vec<_> = profile.iter().flat_map(|v| [v.x, v.y]).collect();
-    let Ok(tri_idx) = earcutr::earcut(&floats, &[], 2) else {
-        error!("Can't triangulate rail polygon");
-        return mesh;
-    };
+    if let Ok(tri_idx) = earcutr::earcut(&floats, &[], 2) {
+        if !open_start {
+            let new_tris = tri_idx.iter()
+                .rev()
+                .map(|ix| start_points[*ix]);
+            tris.extend(new_tris);
+        }
+        if !open_end {
+            let new_tris = tri_idx.iter()
+                .map(|ix| end_points[*ix]);
+            tris.extend(new_tris);
+        }
+    } else {
+        error!("Can't triangulate polygon for extrusion ends");
+    }
 
-    let tris: Vec<_> = tri_idx.iter()
-        .map(|ix| profile[*ix])
-        .map(|v: Vec2| v.extend(0.0))
-        .collect();
-
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, tris);
-    mesh.compute_flat_normals();
-
-    mesh
+    /* Create a mesh from the triangles */
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, tris)
+        .with_computed_flat_normals()
 }
 
-fn create_bed_mesh(params: &TrackRenderParams, length: f32, open_start: bool, open_end: bool) -> Mesh {
+fn create_bed_mesh(params: &TrackRenderParams, length: f32, open_start: bool, open_end: bool, start_normal: Vec3, end_normal: Vec3) -> Mesh {
     let bed_profile = BoxedPolyline2d::new(params.bed_profile.clone());
-    let mut mesh = open_extrusion(&bed_profile.vertices, length);
-
-    if !open_start {
-        mesh.merge(&polygon(&bed_profile.vertices)
-            .rotated_by(Quat::from_axis_angle(Vec3::Y, TAU/2.0)));
-    }
-    if !open_end {
-        mesh.merge(&polygon(&bed_profile.vertices)
-            .translated_by(Vec3::new(0.0, 0.0, length)));
-    }
-
-    mesh
+    extrusion(&bed_profile.vertices, length, open_start, open_end, start_normal, end_normal)
 }
 
 fn create_sleeper_mesh(sleeper_dims: Vec3) -> Mesh {
