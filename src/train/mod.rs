@@ -1,8 +1,12 @@
 use bevy::prelude::*;
 
 use crate::track::segment::{Segment, SegmentLinkage};
+use crate::train::rendering::{render_trains, setup_render_params, TrainRenderParams};
+
+mod rendering;
 
 #[derive(Component, Reflect)]
+#[require(Transform, Visibility)]
 pub struct TrainCar {
     pub segment_id: Entity,
     pub segment_position: f32,
@@ -10,6 +14,21 @@ pub struct TrainCar {
     pub acceleration: f32,
     pub max_speed: f32,
     pub length: f32,
+}
+
+
+#[derive(Default)]
+pub struct TrainPlugin;
+
+impl Plugin for TrainPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .register_type::<TrainCar>()
+            .init_resource::<TrainRenderParams>()
+            .add_systems(Startup, setup_render_params)
+            .add_systems(Update, render_trains)
+            .add_systems(Update, (move_train, update_train_position));
+    }
 }
 
 pub fn move_train(

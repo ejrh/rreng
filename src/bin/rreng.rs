@@ -31,14 +31,13 @@ fn main() {
         .add_plugins(sky::SkyPlugin)
         .add_plugins(terrain::TerrainPlugin)
         .add_plugins(track::TrackPlugin)
+        .add_plugins(train::TrainPlugin)
         .add_plugins(debug::DebugPlugin)
         .add_plugins(tools::ToolsPlugin)
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)
         .add_systems(Startup, utils::show_help_text)
-        .add_systems(Update, utils::fix_apparent_size)
-        .register_type::<train::TrainCar>()
-        .add_systems(Update, (train::move_train, train::update_train_position));
+        .add_systems(Update, utils::fix_apparent_size);
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, utils::close_on_esc);
