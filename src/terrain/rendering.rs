@@ -198,7 +198,7 @@ fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> 
         for Triangle { points } in &triangles {
             let p = points.map(|[r,c]| {
                 let h = data[(r, c)];
-                Vec3::new(c as f32 * scale.x, h, r as f32  * scale.y)
+                Vec3::new(c as f32 * scale.x, h, r as f32 * scale.z)
             });
             pos.extend(p);
         }
