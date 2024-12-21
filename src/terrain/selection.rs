@@ -6,6 +6,7 @@ use bevy::picking::pointer::PointerId;
 use bevy::prelude::*;
 
 use crate::terrain::rendering::TerrainMesh;
+use crate::terrain::TerrainLayer;
 use crate::utils::ConstantApparentSize;
 
 #[derive(Default, Resource)]
@@ -40,7 +41,7 @@ pub fn update_selected_point(
     mut selected_point: ResMut<SelectedPoint>,
     mut raycast: MeshRayCast,
     mut marker_query: Query<&mut Transform, With<SelectionMarker>>,
-    terrain_meshes: Query<Entity, With<TerrainMesh>>,
+    terrain_meshes: Query<&TerrainMesh>,
     camera_query: Query<Entity, With<Camera>>,
 ) {
     let camera = camera_query.single();
@@ -52,7 +53,10 @@ pub fn update_selected_point(
 
     let Some(cursor_ray) = cursor_ray else { return };
 
-    let filter = |e| terrain_meshes.contains(e);
+    let filter = |e| {
+        matches!(terrain_meshes.get(e), Ok(TerrainMesh { layer: TerrainLayer::Elevation, .. }))
+        // terrain_meshes.contains(e)
+    };
     let settings = RayCastSettings::default()
         .with_filter(&filter);
 

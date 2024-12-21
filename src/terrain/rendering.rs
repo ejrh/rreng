@@ -20,7 +20,8 @@ use crate::terrain::utils::Range2;
 
 #[derive(Component)]
 pub struct TerrainMesh {
-    block_num: (usize, usize),
+    pub layer: TerrainLayer,
+    pub block_num: (usize, usize),
 }
 
 #[derive(Component)]
@@ -53,7 +54,7 @@ pub fn init_render_params(
     let mut dirt_material = StandardMaterial::from(Color::srgb(0.51, 0.25, 0.03));
     dirt_material.perceptual_roughness = 0.5;
     dirt_material.reflectance = 0.1;
-    let mut grass_material = StandardMaterial::from(Color::srgb(0.3, 0.6, 0.2));
+    let mut grass_material = StandardMaterial::from(Color::srgba(0.3, 0.6, 0.2, 0.75));
     grass_material.perceptual_roughness = 0.75;
     grass_material.reflectance = 0.25;
     let mut water_material = StandardMaterial::from(Color::srgb(0.25, 0.41, 0.88));
@@ -127,7 +128,10 @@ pub fn update_meshes(
             };
 
             commands.spawn((
-                TerrainMesh { block_num: block_info.block_num },
+                TerrainMesh {
+                    layer: layer.clone(),
+                    block_num: block_info.block_num
+                },
                 Mesh3d(mesh),
                 MeshMaterial3d(layer_material.clone()),
                 transform,
@@ -146,7 +150,10 @@ pub fn update_meshes(
                     let mesh: Mesh = Cuboid::from_size(size).into();
                     let mesh = mesh.translated_by(size/2.0);
                     commands.spawn((
-                        TerrainMesh { block_num: block_info.block_num },
+                        TerrainMesh {
+                            layer: layer.clone(),
+                            block_num: block_info.block_num
+                        },
                         Mesh3d(meshes.add(mesh)),
                         MeshMaterial3d(params.water_material.clone()),
                         transform
@@ -160,14 +167,6 @@ pub fn update_meshes(
     for block_info in blocks {
         block_info.dirty = false;
     }
-
-    /* Clean up orphaned terrain meshes */
-    // for (entity, terrain_mesh) in terrain_meshes.iter() {
-    //     let block_info = &terrain.block_info[terrain_mesh.block_num];
-    //     if block_info.mesh_entity != Some(entity) {
-    //         commands.entity(entity).despawn();
-    //     }
-    // }
 }
 
 pub fn swap_mesh_alternates(
