@@ -15,7 +15,7 @@ use ndarray::{s, Array2};
 
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
-use crate::terrain::{Terrain, TerrainLayer};
+use crate::terrain::{BlockInfo, Terrain, TerrainLayer};
 use crate::terrain::utils::Range2;
 
 #[derive(Component)]
@@ -80,30 +80,37 @@ pub fn update_meshes(
     /* Explicitly borrow the object so we can simultaneously borrow different fields of it later */
     let terrain = &mut *terrain;
 
-    for block_info in terrain.block_info.iter_mut()
+    /* Collect affected blocks */
+    let blocks: Vec<&mut BlockInfo> = terrain.block_info.iter_mut()
         .filter(|bi| bi.dirty)
-        .take(RENDERS_PER_FRAME) {
-        block_info.dirty = false;
+        .take(RENDERS_PER_FRAME)
+        .collect();
 
+    /* Despawn existing meshes for these blocks */
+    for block_info in &blocks {
         for (e, tm) in terrain_meshes.iter() {
             if tm.block_num == block_info.block_num {
                 commands.entity(e).despawn_recursive();
             }
         }
+    }
 
-        for (layer, elevation) in &terrain.layers {
-            let parent_id = *params.parent_id.entry(*layer).or_insert_with(||
-                 commands.spawn((
-                     Name::new(format!("Terrain:{:?}", layer)),
-                     Visibility::default(),
-                     Transform::default()
-                 )).id());
+    /* Process each layer */
+    for (layer, elevation) in &terrain.layers {
+        let parent_id = *params.parent_id.entry(*layer).or_insert_with(||
+            commands.spawn((
+                Name::new(format!("Terrain:{:?}", layer)),
+                Visibility::default(),
+                Transform::default()
+            )).id());
 
-            let (layer_height_adjust, layer_material) = match layer {
-                TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
-                TerrainLayer::Structure => (-1.0, params.grass_material.clone()),
-            };
+        let (layer_height_adjust, layer_material) = match layer {
+            TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
+            TerrainLayer::Structure => (-1.0, params.grass_material.clone()),
+        };
 
+        /* For each block, recreate its meshes */
+        for block_info in &blocks {
             let high_res = queue_mesh_task(0.1, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut mesh_task_queue.0);
             let low_res = queue_mesh_task(0.5, 1, elevation.clone(), block_info.range.clone(), &mut meshes, &mut mesh_task_queue.0);
 
@@ -122,7 +129,7 @@ pub fn update_meshes(
             commands.spawn((
                 TerrainMesh { block_num: block_info.block_num },
                 Mesh3d(mesh),
-                MeshMaterial3d(layer_material),
+                MeshMaterial3d(layer_material.clone()),
                 transform,
                 alternates,
             ))
@@ -135,7 +142,7 @@ pub fn update_meshes(
                 let elevation = &*_guard;
                 let elevation_view = elevation.slice(s!(block_info.range.0.clone();spacing, block_info.range.1.clone();spacing));
                 if elevation_view.iter().copied().reduce(f32::min).unwrap() <= 0.01f32 {
-                    let size = Vec3::new(64.0, 0.01, 64.0);
+                    let size = Vec3::new(terrain.block_size as f32, 0.01, terrain.block_size as f32);
                     let mesh: Mesh = Cuboid::from_size(size).into();
                     let mesh = mesh.translated_by(size/2.0);
                     commands.spawn((
@@ -147,6 +154,11 @@ pub fn update_meshes(
                 }
             }
         }
+    }
+
+    /* Reset these blocks' dirty flag */
+    for block_info in blocks {
+        block_info.dirty = false;
     }
 
     /* Clean up orphaned terrain meshes */
