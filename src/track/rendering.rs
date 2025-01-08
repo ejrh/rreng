@@ -77,7 +77,7 @@ pub fn init_render_params(
 }
 
 pub fn update_track_meshes(
-    segments: Query<(Entity, &Segment, &SegmentLinkage, &Transform)>,
+    segments: Query<(Entity, &Segment, &SegmentLinkage, &Transform), Or<(Changed<Segment>, Changed<SegmentLinkage>, Changed<Transform>)>>,
     points: Query<&Transform, With<Point>>,
     params: Res<TrackRenderParams>,
     mut meshes: ResMut<Assets<Mesh>>,
