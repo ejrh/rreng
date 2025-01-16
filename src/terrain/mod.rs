@@ -111,7 +111,9 @@ impl Terrain {
     }
 
     pub fn set_elevation(&mut self, offset: (isize, isize), data: ndarray::ArrayView2<f32>, layer: TerrainLayer) {
-        let target_layer = &self.layers[&layer];
+        /* Clone the layer reference so we aren't still borrowing it when we
+           want to call self.dirty_range */
+        let target_layer = self.layers[&layer].clone();
         let mut target_layer = target_layer.lock().unwrap();
 
         let data_dims = data.dim();
@@ -126,16 +128,7 @@ impl Terrain {
         let mut dest = target_layer.slice_mut(s!(to_rows, to_cols));
         dest.assign(&src);
 
-        for i in 0..self.num_blocks[0] {
-            for j in 0..self.num_blocks[1] {
-                let block_info = &mut self.block_info[(i, j)];
-                if !block_info.range.overlaps(&data_range) {
-                    continue;
-                }
-
-                block_info.dirty = true;
-            }
-        }
+        self.dirty_range(data_range);
     }
 
     pub fn dirty_range(&mut self, range: Range2) {
