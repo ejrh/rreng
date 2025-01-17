@@ -44,19 +44,17 @@ impl Plugin for TerrainPlugin {
             .init_resource::<loading::LoadingState>()
             .init_asset::<tiles::TileSets>()
             .init_asset_loader::<tiles::TileSetsLoader>()
-            .init_asset::<datafile::DataFile>()
+            .init_asset::<DataFile>()
             .init_asset_loader::<datafile::DataFileLoader>()
             .init_asset::<tiles::ElevationFile>()
             .init_asset_loader::<tiles::ElevationFileLoader>()
-            .add_systems(Startup, rendering::init_render_params)
+            .add_plugins(rendering::TerrainRenderingPlugin)
             .add_systems(Startup, loading::load_initial_terrain)
             .add_systems(Update, loading::tilesets_loaded)
             .add_systems(Update, loading::datafile_loaded)
             .add_systems(Update, loading::elevation_loaded)
             .add_systems(Update, (loading::check_loading_state, loading::set_camera_range)
                 .run_if(resource_changed::<loading::LoadingState>))
-            .init_resource::<rendering::MeshTaskQueue>()
-            .add_systems(Update, (rendering::update_meshes, rendering::swap_mesh_alternates, rendering::handle_mesh_tasks))
             .init_resource::<selection::SelectedPoint>();
 
         app
@@ -67,7 +65,7 @@ impl Plugin for TerrainPlugin {
     }
 }
 
-#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Reflect, Serialize, Deserialize)]
 pub enum TerrainLayer {
     Elevation,
     Structure,
