@@ -101,6 +101,9 @@ pub fn fix_apparent_size(
             1.0
         };
 
-        transform.scale = Vec3::splat(scale);
+        let new_scale = Vec3::splat(scale);
+        if (transform.scale - new_scale).length_squared() > 0.001 {
+            transform.scale = new_scale;
+        }
     }
 }

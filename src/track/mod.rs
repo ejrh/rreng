@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::prelude::{App, IntoSystemConfigs, Plugin, PostUpdate, Startup, Update};
+
+use crate::track::point::Point;
+use crate::track::segment::{Segment, SegmentLinkage};
 
 pub mod point;
 pub mod rendering;
@@ -17,13 +20,17 @@ pub struct TrackPlugin;
 impl Plugin for TrackPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<point::Point>()
-            .register_type::<segment::Segment>()
-            .register_type::<segment::SegmentLinkage>()
+            .register_type::<Point>()
+            .register_type::<Segment>()
+            .register_type::<SegmentLinkage>()
             .add_systems(Startup, rendering::init_render_params)
-            .add_systems(Update, (segment::update_points, segment::update_segments, segment::update_segment_linkage).chain())
-            .add_systems(Update, point::render_points)
-            .add_systems(Update, point::update_point_angles)
-            .add_systems(Update, rendering::update_track_meshes);
+            .add_systems(Update, (
+                point::move_points,
+                segment::update_segments,
+                point::update_point_angles,
+                segment::update_segment_linkage
+            ).chain())
+            .add_systems(PostUpdate, point::render_points)
+            .add_systems(PostUpdate, rendering::update_track_meshes);
     }
 }
