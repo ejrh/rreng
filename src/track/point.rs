@@ -1,37 +1,13 @@
 use std::collections::HashMap;
 
-use bevy::asset::Assets;
-use bevy::color::{Color, LinearRgba};
 use bevy::math::Vec3;
-use bevy::pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver, StandardMaterial};
-use bevy::prelude::{info, Changed, Commands, Component, DetectChangesMut, Entity, Mesh, Mesh3d, Quat, Query, Reflect, ResMut, Sphere, Transform, With, Without};
+use bevy::prelude::{info, Changed, Component, DetectChangesMut, Entity, Quat, Query, Reflect, Transform, With, Without};
 
 use crate::track::segment::Segment;
-use crate::utils::ConstantApparentSize;
 
 #[derive(Component, Reflect)]
 #[require(Transform)]
 pub struct Point;
-
-pub fn render_points(
-    changed_points: Query<Entity, Changed<Point>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut commands: Commands,
-) {
-    for point in changed_points.iter() {
-        let mesh: Mesh = Sphere::new(1.0).into();
-        let mut material = StandardMaterial::from_color(Color::srgb(0.25, 0.25, 0.5));
-        material.emissive = LinearRgba::rgb(0.0, 0.0, 1.0);
-        commands.entity(point).insert((
-            Mesh3d(meshes.add(mesh)),
-            MeshMaterial3d(materials.add(material)),
-            ConstantApparentSize(100.0..250.0),
-            NotShadowCaster,
-            NotShadowReceiver,
-        ));
-    }
-}
 
 pub fn move_points(
     changed_points: Query<(), (Changed<Transform>, With<Point>, Without<Segment>)>,

@@ -30,7 +30,6 @@ impl Plugin for TrackPlugin {
                 point::update_point_angles,
                 segment::update_segment_linkage
             ).chain())
-            .add_systems(PostUpdate, point::render_points)
             .add_systems(PostUpdate, rendering::update_track_meshes);
     }
 }
