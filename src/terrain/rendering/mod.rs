@@ -60,7 +60,13 @@ pub struct TerrainRenderParams {
     water_material: Handle<StandardMaterial>,
 }
 
-pub struct MeshTask(Handle<Mesh>, Task<Mesh>);
+pub struct MeshTask {
+    terrain_mesh: TerrainMesh,
+    transform: Transform,
+    material: Handle<StandardMaterial>,
+    handle: Handle<Mesh>,
+    task: Task<Mesh>,
+}
 
 #[derive(Default, Resource)]
 pub struct MeshTaskQueue(Vec<MeshTask>);
@@ -111,10 +117,9 @@ pub fn update_parents(
 pub fn update_meshes(
     mut terrain: ResMut<Terrain>,
     params: Res<TerrainRenderParams>,
-    mut mesh_trees: Query<&mut MeshTree>,
+    mesh_trees: Query<&MeshTree>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
-    mut commands: Commands,
 ) {
     /* Collect affected blocks */
     let blocks: Vec<_> = terrain.block_info.indexed_iter()
@@ -130,7 +135,7 @@ pub fn update_meshes(
     for (layer, elevation) in &terrain.layers {
         /* Get the parent, mesh tree, and various render settings for this layer */
         let parent_id = params.parent_id[layer];
-        let mut tree = mesh_trees.get_mut(parent_id).unwrap();
+        let tree = mesh_trees.get(parent_id).unwrap();
 
         let (layer_height_adjust, layer_material) = match layer {
             TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
@@ -153,25 +158,28 @@ pub fn update_meshes(
 
             let range = block_range(terrain.block_size, *block);
             let (threshold, spacing) = block_quality(*block);
-            let mesh = queue_mesh_task(threshold, spacing, elevation.clone(), range.clone(), &mut meshes, &mut mesh_task_queue.0);
 
+            let terrain_mesh = TerrainMesh {
+                layer: *layer,
+                block_id: *block,
+            };
             let level_size = terrain.block_size * (1 << block.level);
             let xp = block.col as f32 * level_size as f32;
             let yp = block.row as f32 * level_size as f32;
             let transform = Transform::from_xyz(xp, layer_height_adjust, yp);
             let material = layer_material.clone();
-            let id = commands.spawn((
-                TerrainMesh {
-                    layer: *layer,
-                    block_id: *block,
-                },
-                Mesh3d(mesh),
-                MeshMaterial3d(material),
+
+            queue_mesh_task(
+                terrain_mesh,
                 transform,
-            ))
-                .set_parent(parent_id)
-                .id();
-            tree.set_mesh(*block, BlockKind::Populated(id));
+                material,
+                threshold,
+                spacing,
+                elevation.clone(),
+                range.clone(),
+                &mut meshes,
+                &mut mesh_task_queue.0
+            );
         }
     }
 
@@ -304,7 +312,17 @@ fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> 
     }
 }
 
-fn queue_mesh_task(threshold: f32, spacing: i32, data: Arc<Mutex<Array2<f32>>>, range: Range2, meshes: &mut Assets<Mesh>, queue: &mut Vec<MeshTask>) -> Handle<Mesh> {
+fn queue_mesh_task(
+    terrain_mesh: TerrainMesh,
+    transform: Transform,
+    material: Handle<StandardMaterial>,
+    threshold: f32,
+    spacing: i32,
+    data: Arc<Mutex<Array2<f32>>>,
+    range: Range2,
+    meshes: &mut Assets<Mesh>,
+    queue: &mut Vec<MeshTask>
+) {
     let handle = meshes.reserve_handle();
 
     let thread_pool = AsyncComputeTaskPool::get();
@@ -315,22 +333,45 @@ fn queue_mesh_task(threshold: f32, spacing: i32, data: Arc<Mutex<Array2<f32>>>, 
         create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold)
     });
 
-    queue.push(MeshTask(handle.clone(), task));
-
-    handle
+    queue.push(MeshTask {
+        terrain_mesh,
+        transform,
+        material,
+        handle,
+        task,
+    });
 }
 
 pub fn handle_mesh_tasks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
+    params: Res<TerrainRenderParams>,
+    mut mesh_trees: Query<&mut MeshTree>,
+    mut commands: Commands,
 ) {
     if mesh_task_queue.0.is_empty() { return; }
 
     let old_queue = take(&mut mesh_task_queue.0);
 
     for mut mt in old_queue {
-        if let Some(mesh) = block_on(future::poll_once(&mut mt.1)) {
-            meshes.insert(mt.0.id(), mesh);
+        if let Some(mesh) = block_on(future::poll_once(&mut mt.task)) {
+            meshes.insert(mt.handle.id(), mesh);
+
+            let block_id = mt.terrain_mesh.block_id;
+            let layer = mt.terrain_mesh.layer;
+            let parent_id = params.parent_id[&layer];
+            let mut tree = mesh_trees.get_mut(parent_id).unwrap();
+
+            let id = commands.spawn((
+                mt.terrain_mesh,
+                Mesh3d(mt.handle),
+                MeshMaterial3d(mt.material),
+                mt.transform,
+            ))
+                .set_parent(parent_id)
+                .id();
+            tree.set_mesh(block_id, BlockKind::Populated(id));
+
         } else {
             mesh_task_queue.0.push(mt);
         }
