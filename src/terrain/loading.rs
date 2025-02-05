@@ -194,7 +194,7 @@ fn create_initial_tracks(
                 speed: 0.001,
                 acceleration: 1.0,
                 max_speed: 100_000.0 / 3600.0,
-                length: 16.0,
+                length: 12.0,
             },
         ));
         info!("created train");

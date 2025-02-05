@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
 
 use crate::track::segment::{Segment, SegmentLinkage};
@@ -15,7 +17,6 @@ pub struct TrainCar {
     pub max_speed: f32,
     pub length: f32,
 }
-
 
 #[derive(Default)]
 pub struct TrainPlugin;
@@ -81,31 +82,69 @@ pub fn update_train_position(
         let Ok((seg, linkage, seg_transform)) = segments.get(car.segment_id)
         else { continue; };
 
-        let p1 = car.length / 2.0;
-        let p2 = seg.length - car.length / 2.0;
+        /* Cutoff position of the car where it is turning from/to an adjacent segment */
+        let p1 = if linkage.prev_segment.is_some() { car.length / 2.0 } else { 0.0 };
+        let p2 = if linkage.next_segment.is_some() { seg.length - car.length / 2.0 } else { seg.length };
 
-        *transform = Transform::default();
-        transform.translation.z = car.segment_position;
-        transform.translation.y += crate::track::TRACK_HEIGHT;
+        /* Simple case: car is fully within this one segment */
+        if (p1..=p2).contains(&car.segment_position) {
+            *transform = Transform::default();
+            transform.translation.y += crate::track::TRACK_HEIGHT;
+            transform.translation.z = car.segment_position;
 
-        *transform = seg_transform.mul_transform(*transform);
-
-        if linkage.next_segment.is_some() && car.segment_position > p2 {
-            let Ok((_, _, next_seg_transform)) = segments.get(linkage.next_segment.unwrap())
-            else { continue; };
-
-            let mix = (car.segment_position - p2) / (seg.length - p2);
-
-            transform.rotation = seg_transform.rotation.lerp(next_seg_transform.rotation, mix/2.0);
+            *transform = seg_transform.mul_transform(*transform);
+            continue;
         }
 
-        if linkage.prev_segment.is_some() && car.segment_position < p1 {
+        /* Complex case: car is mostly on this segment, but part of it is on an adjacent segment.
+        First figure out if it's the previous or next segment and set some parameters accordingly.
+        Junction is the point where the two segments join; its direction is set along the adjacent
+        segment, towards the junction.  Mix is the proportion of the other segment to use for the
+        car's rotation. */
+        let next_seg: Transform;
+        let mut junction: Transform;
+        let mix: f32;
+        //TODO a hack for 1.0 or -1.0 depending on what end of the train we want to anchor
+        let anchor_dir: f32;
+
+        if car.segment_position < p1 {
             let Ok((_, _, prev_seg_transform)) = segments.get(linkage.prev_segment.unwrap().0)
             else { continue; };
 
-            let mix = 1.0 - car.segment_position / p1;
+            next_seg = *prev_seg_transform;
+            junction = *seg_transform;
+            junction.rotation = prev_seg_transform.rotation * Quat::from_axis_angle(Vec3::Y, PI);
+            mix = 1.0 - car.segment_position / p1;
+            anchor_dir = -1.0;
+        } else {
+            let Ok((_, _, next_seg_transform)) = segments.get(linkage.next_segment.unwrap())
+            else { continue; };
 
-            transform.rotation = seg_transform.rotation.lerp(prev_seg_transform.rotation, mix/2.0);
+            next_seg = *next_seg_transform;
+            junction = *next_seg_transform;
+            junction.rotation = next_seg_transform.rotation;
+            mix = (car.segment_position - p2) / (seg.length - p2);
+            anchor_dir = 1.0;
         }
+
+        /* The rotation of the car is interpolated between each segment */
+        let car_rotation = seg_transform.rotation.lerp(next_seg.rotation, mix/2.0);
+
+        /* The placement is solved using the triangle sine identity.  Theta is the angle of the
+        junction; alpha is the angle between the car and the segment it's mostly on; dist is
+        the distance of the opposing point (the one on the adjacent segment) from the junction. */
+        let theta = seg_transform.rotation.angle_between(junction.rotation);
+        let alpha = seg_transform.rotation.angle_between(car_rotation);
+        let dist = (car.length * alpha.sin()) / theta.sin();
+
+        /* connection is where on the adjacent segment we want to connect the train;
+        anchor is the part of the train we want to connect there. */
+        let connection = junction.translation + junction.back() * dist;
+        let anchor = car_rotation * Vec3::Z * (car.length / 2.0) * anchor_dir;
+
+        *transform = Transform::default();
+        transform.translation = connection - anchor;
+        transform.translation.y += crate::track::TRACK_HEIGHT;
+        transform.rotation = car_rotation;
     }
 }
