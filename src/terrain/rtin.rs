@@ -118,7 +118,6 @@ fn build_rtin_mesh(
 
     let mut triangles = Vec::new();
 
-    #[allow(clippy::too_many_arguments)]
     fn process_triangle(
         ax: usize, ay: usize, bx: usize, by: usize, cx: usize, cy: usize,
         threshold: f32,
