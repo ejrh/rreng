@@ -39,7 +39,8 @@ features = [
     "animation",
     "multi_threaded",
     "png",
-    "webgl2"
+    "trace",
+    "webgl2",
 ]
 
 [dependencies.bevy-inspector-egui]

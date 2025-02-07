@@ -290,7 +290,7 @@ pub fn cleanup_meshes(
 }
 
 fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> Mesh {
-    _ = info_span!("create mesh").entered();
+    let _span = info_span!("create.mesh").entered();
 
     if threshold == 0.0 {
         heightmap_to_mesh(&data, scale)

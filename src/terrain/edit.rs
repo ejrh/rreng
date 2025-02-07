@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::ops::DerefMut;
 
 use bevy::input::ButtonInput;
+use bevy::log::info_span;
 use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
 use ndarray::{Array2, Ix, Ixs};
 
@@ -29,6 +30,8 @@ pub fn click_point(
     if row >= elevation.dim().0 || col >= elevation.dim().1 {
         return;
     }
+
+    let _span = info_span!("terraform.height").entered();
 
     if left && !right { elevation[(row, col)] += 1.0; }
     if right && !left { elevation[(row, col)] -= 1.0; }
@@ -75,6 +78,8 @@ pub fn drag_point(
         if row >= elevation.dim().0 || col >= elevation.dim().1 {
             return;
         }
+
+        let _span = info_span!("terraform.level").entered();
 
         let dist = selected_point.point.distance(start_point.point);
         for i in 1..= dist as usize {
