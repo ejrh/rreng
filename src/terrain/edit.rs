@@ -3,7 +3,7 @@ use std::ops::DerefMut;
 
 use bevy::input::ButtonInput;
 use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
-use ndarray::{Array2, Ix};
+use ndarray::{Array2, Ix, Ixs};
 
 use crate::terrain::selection::SelectedPoint;
 use crate::terrain::{Terrain, TerrainLayer};
@@ -127,34 +127,17 @@ fn propagate(crow: Ix, ccol: Ix, data: &mut Array2<f32>) -> Range2 {
     range
 }
 
-fn neighbours(row: Ix, col: Ix, dims: (Ix, Ix)) -> Vec<(Ix, Ix)> {
-    let mut results = Vec::new();
+fn neighbours(row: Ix, col: Ix, dims: (Ix, Ix)) -> impl Iterator<Item=(Ix, Ix)> {
+    const ADJUSTMENTS: [(Ixs, Ixs); 8] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
 
-    if row > 0 {
-        results.push((row - 1, col));
-    }
-    if row < dims.0 - 1 {
-        results.push((row + 1, col));
-    }
-    if col > 0 {
-        results.push((row, col - 1));
-    }
-    if col < dims.1 - 1 {
-        results.push((row, col + 1));
-    }
+    let row = row as Ixs;
+    let col = col as Ixs;
 
-    if row > 0 && col > 0 {
-        results.push((row - 1, col - 1));
-    }
-    if row > 0 && col < dims.1 - 1 {
-        results.push((row - 1, col + 1));
-    }
-    if row < dims.0 - 1 && col > 0 {
-        results.push((row + 1, col - 1));
-    }
-    if row < dims.0 - 1 && col < dims.1 - 1 {
-        results.push((row + 1, col + 1));
-    }
+    let row_range = 0..dims.0 as Ixs;
+    let col_range = 0..dims.1 as Ixs;
 
-    results
+    ADJUSTMENTS.iter()
+        .map(move |(r, c)| (row + r, col + c))
+        .filter(move |(r, c)| row_range.contains(r) && col_range.contains(c))
+        .map(|(r, c)| (r as Ix, c as Ix))
 }
