@@ -37,7 +37,8 @@ fn main() {
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)
         .add_systems(Startup, utils::show_help_text)
-        .add_systems(Update, utils::fix_apparent_size);
+        .add_systems(Update, utils::fix_apparent_size)
+        .add_event::<events::GraphicsEvent>();
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, utils::close_on_esc);

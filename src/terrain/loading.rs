@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use crate::camera::CameraState;
+use crate::events::GraphicsEvent;
 use crate::terrain::datafile::{DataFile, Track};
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
@@ -70,6 +71,7 @@ pub fn check_loading_state(
     tilesets_assets: Res<Assets<TileSets>>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
+    mut events: EventWriter<GraphicsEvent>,
 ) {
     let Some(tilesets) = tilesets_assets.get(&loading_state.tilesets_handle)
     else { return };
@@ -116,6 +118,8 @@ pub fn check_loading_state(
         create_initial_tracks(datafile, &mut commands);
         loading_state.created_tracks = true;
     }
+
+    events.send(GraphicsEvent::LoadLevel);
 }
 
 pub fn elevation_loaded(

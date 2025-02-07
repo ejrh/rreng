@@ -1,19 +1,19 @@
-use std::collections::{HashMap, HashSet};
-use std::mem::take;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use bevy::{
     prelude::*,
     render::{
-        mesh::PrimitiveTopology
-        ,
+        mesh::PrimitiveTopology,
         render_asset::RenderAssetUsages
     }};
+use bevy::render::mesh::MeshAabb;
 use bevy::render::primitives::Aabb;
 use bevy::tasks::{block_on, AsyncComputeTaskPool, Task};
 use bevy::tasks::futures_lite::future;
 use ndarray::{s, Array2};
 
+use crate::events::GraphicsEvent;
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
@@ -35,10 +35,9 @@ impl Plugin for TerrainRenderingPlugin {
             .add_systems(Update, (
                 update_parents,
                 update_meshes,
+                handle_mesh_tasks,
                 select_meshes,
-                handle_mesh_tasks
-            ).chain())
-            .add_systems(PostUpdate, cleanup_meshes);
+            ).chain());
     }
 }
 
@@ -64,7 +63,6 @@ pub struct MeshTask {
     terrain_mesh: TerrainMesh,
     transform: Transform,
     material: Handle<StandardMaterial>,
-    handle: Handle<Mesh>,
     task: Task<Mesh>,
 }
 
@@ -120,7 +118,6 @@ pub fn update_meshes(
     mut terrain_data: ResMut<TerrainData>,
     params: Res<TerrainRenderParams>,
     mesh_trees: Query<&MeshTree>,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
 ) {
     /* Collect affected blocks */
@@ -179,7 +176,6 @@ pub fn update_meshes(
                 spacing,
                 elevation.clone(),
                 range.clone(),
-                &mut meshes,
                 &mut mesh_task_queue.0
             );
         }
@@ -191,16 +187,124 @@ pub fn update_meshes(
     }
 }
 
+fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> Mesh {
+    let _span = info_span!("create.mesh").entered();
+
+    if threshold == 0.0 {
+        heightmap_to_mesh(&data, scale)
+    } else {
+        let Triangulation { triangles } = triangulate_rtin(&data, threshold);
+
+        let mut pos  = Vec::new();
+        for Triangle { points } in &triangles {
+            let p = points.map(|[r,c]| {
+                let h = data[(r, c)];
+                Vec3::new(c as f32 * scale.x, h, r as f32 * scale.z)
+            });
+            pos.extend(p);
+        }
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, pos);
+        mesh.compute_flat_normals();
+        mesh
+    }
+}
+
+fn queue_mesh_task(
+    terrain_mesh: TerrainMesh,
+    transform: Transform,
+    material: Handle<StandardMaterial>,
+    threshold: f32,
+    spacing: i32,
+    data: Arc<Mutex<Array2<f32>>>,
+    range: Range2,
+    queue: &mut Vec<MeshTask>
+) {
+    let thread_pool = AsyncComputeTaskPool::get();
+
+    let task = thread_pool.spawn(async move {
+        let data = data.lock().unwrap();
+        let elevation_view = data.slice(s!(range.0.clone();spacing, range.1.clone();spacing));
+        create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold)
+    });
+
+    queue.push(MeshTask {
+        terrain_mesh,
+        transform,
+        material,
+        task,
+    });
+}
+
+pub fn handle_mesh_tasks(
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut mesh_task_queue: ResMut<MeshTaskQueue>,
+    params: Res<TerrainRenderParams>,
+    mut mesh_trees: Query<&mut MeshTree>,
+    mut commands: Commands,
+    mut events: EventWriter<GraphicsEvent>,
+) {
+    if mesh_task_queue.0.is_empty() { return; }
+
+    let old_queue = std::mem::take(&mut mesh_task_queue.0);
+
+    let mut any_change = false;
+
+    for mut mt in old_queue {
+        if let Some(mesh) = block_on(future::poll_once(&mut mt.task)) {
+            let Some(aabb) = mesh.compute_aabb()
+                else { warn!("Could not compute Aabb for terrain mesh"); continue; };
+
+            let handle = meshes.add(mesh);
+
+            let block_id = mt.terrain_mesh.block_id;
+            let layer = mt.terrain_mesh.layer;
+            let parent_id = params.parent_id[&layer];
+            let mut tree = mesh_trees.get_mut(parent_id).unwrap();
+
+            let id = commands.spawn((
+                mt.terrain_mesh,
+                Mesh3d(handle),
+                MeshMaterial3d(mt.material),
+                mt.transform,
+                Visibility::Hidden,
+                aabb,
+            ))
+                .set_parent(parent_id)
+                .id();
+
+            if let Some(old_id) = tree.set_mesh(block_id, BlockKind::Populated(id)) {
+                commands.entity(old_id).despawn_recursive();
+            }
+
+            any_change = true;
+        } else {
+            mesh_task_queue.0.push(mt);
+        }
+    }
+
+    if any_change {
+        events.send(GraphicsEvent::RenderTerrain);
+    }
+}
+
 pub fn select_meshes(
     terrain: Res<Terrain>,
-    camera_query: Query<&GlobalTransform, (With<Camera>, Changed<GlobalTransform>)>,
+    camera_query: Query<&GlobalTransform, With<Camera>>,
     mesh_trees: Query<&mut MeshTree>,
     mut meshes: Query<(&GlobalTransform, &Aabb, &mut Visibility), Without<Camera>>,
+    mut events: EventReader<GraphicsEvent>,
 ) {
     const TOLERANCE: f32 = 50.0;
 
     let Ok(camera_transform) = camera_query.get_single()
     else { return };
+
+    if !events.read().any(|e|
+        matches!(e, GraphicsEvent::MoveCamera | GraphicsEvent::RenderTerrain)
+    ) {
+        return;
+    }
 
     fn set_vis(vis: &mut Mut<Visibility>, new_value: Visibility) {
         if **vis != new_value {
@@ -236,6 +340,7 @@ pub fn select_meshes(
 
                         too_close
                     } else {
+                        warn!("no mesh?");
                         true
                     }
                 },
@@ -256,127 +361,6 @@ pub fn select_meshes(
 
             descend
         });
-    }
-}
-
-pub fn cleanup_meshes(
-    mesh_trees: Query<&MeshTree>,
-    meshes: Query<(Entity, &Parent, &TerrainMesh)>,
-    mut commands: Commands,
-) {
-    let mut num_despawned = 0;
-
-    /* Build a hash set for all the referenced entities */
-    let mut used_meshes = HashSet::new();
-    for tree in mesh_trees.iter() {
-        tree.walk(&mut |tree, block_id| {
-            let entry = tree.get_entry(block_id);
-            if let BlockKind::Populated(pop_entity) = entry.kind {
-                used_meshes.insert(pop_entity);
-            }
-            true
-        });
-    }
-
-    /* Despawn meshes that aren't used */
-    for (entity, _, _) in meshes.iter() {
-        if !used_meshes.contains(&entity) {
-            commands.entity(entity).despawn_recursive();
-            num_despawned += 1;
-        }
-    }
-
-    if num_despawned > 0 {
-        info!("Cleaned up {num_despawned} unused terrain meshes");
-    }
-}
-
-fn create_mesh(data: ndarray::ArrayView2<f32>, scale: &Vec3, threshold: f32) -> Mesh {
-    let _span = info_span!("create.mesh").entered();
-
-    if threshold == 0.0 {
-        heightmap_to_mesh(&data, scale)
-    } else {
-        let Triangulation { triangles } = triangulate_rtin(&data, threshold);
-
-        let mut pos  = Vec::new();
-        for Triangle { points } in &triangles {
-            let p = points.map(|[r,c]| {
-                let h = data[(r, c)];
-                Vec3::new(c as f32 * scale.x, h, r as f32 * scale.z)
-            });
-            pos.extend(p);
-        }
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, pos);
-        mesh.compute_flat_normals();
-        mesh
-    }
-}
-
-fn queue_mesh_task(
-    terrain_mesh: TerrainMesh,
-    transform: Transform,
-    material: Handle<StandardMaterial>,
-    threshold: f32,
-    spacing: i32,
-    data: Arc<Mutex<Array2<f32>>>,
-    range: Range2,
-    meshes: &mut Assets<Mesh>,
-    queue: &mut Vec<MeshTask>
-) {
-    let handle = meshes.reserve_handle();
-
-    let thread_pool = AsyncComputeTaskPool::get();
-
-    let task = thread_pool.spawn(async move {
-        let data = data.lock().unwrap();
-        let elevation_view = data.slice(s!(range.0.clone();spacing, range.1.clone();spacing));
-        create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold)
-    });
-
-    queue.push(MeshTask {
-        terrain_mesh,
-        transform,
-        material,
-        handle,
-        task,
-    });
-}
-
-pub fn handle_mesh_tasks(
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut mesh_task_queue: ResMut<MeshTaskQueue>,
-    params: Res<TerrainRenderParams>,
-    mut mesh_trees: Query<&mut MeshTree>,
-    mut commands: Commands,
-) {
-    if mesh_task_queue.0.is_empty() { return; }
-
-    let old_queue = take(&mut mesh_task_queue.0);
-
-    for mut mt in old_queue {
-        if let Some(mesh) = block_on(future::poll_once(&mut mt.task)) {
-            meshes.insert(mt.handle.id(), mesh);
-
-            let block_id = mt.terrain_mesh.block_id;
-            let layer = mt.terrain_mesh.layer;
-            let parent_id = params.parent_id[&layer];
-            let mut tree = mesh_trees.get_mut(parent_id).unwrap();
-
-            let id = commands.spawn((
-                mt.terrain_mesh,
-                Mesh3d(mt.handle),
-                MeshMaterial3d(mt.material),
-                mt.transform,
-            ))
-                .set_parent(parent_id)
-                .id();
-            tree.set_mesh(block_id, BlockKind::Populated(id));
-
-        } else {
-            mesh_task_queue.0.push(mt);
-        }
     }
 }
 

@@ -124,9 +124,12 @@ impl MeshTree {
         &mut self.levels[block_id.level].entries[(block_id.row, block_id.col)]
     }
 
-    pub fn set_mesh(&mut self, block_id: BlockId, kind: BlockKind) {
+    pub fn set_mesh(&mut self, block_id: BlockId, kind: BlockKind) -> Option<Entity> {
         let entry = self.get_entry_mut(block_id);
-        entry.kind = kind;
+        let old_kind = std::mem::replace(&mut entry.kind, kind);
+        if let BlockKind::Populated(old_id) = old_kind {
+            Some(old_id)
+        } else { None }
     }
 
     pub fn valid(&self, block_id: BlockId) -> bool {

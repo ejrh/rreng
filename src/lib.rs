@@ -1,5 +1,6 @@
 pub mod camera;
 pub mod debug;
+pub mod events;
 pub mod sky;
 pub mod terrain;
 pub mod toolbar;

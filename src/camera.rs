@@ -6,7 +6,7 @@ use bevy::{
     core_pipeline::tonemapping::Tonemapping,
     prelude::*,
 };
-
+use crate::events::GraphicsEvent;
 use crate::terrain::TerrainData;
 
 pub struct CameraPlugin;
@@ -127,6 +127,7 @@ fn update_camera_position(
     mut query: Query<(&CameraState, &mut Transform), Changed<CameraState>>,
     mut text_query: Query<&mut Text, With<CameraPositionLabel>>,
     terrain_data: Res<TerrainData>,
+    mut events: EventWriter<GraphicsEvent>,
 ) {
     let Ok((state, mut transform)) = query.get_single_mut()
     else { return; };
@@ -143,6 +144,8 @@ fn update_camera_position(
         text.0 = format!("Camera: focus {:3.0}, {:3.0}; yaw {:3.0}; pitch {:3.0}",
                                          state.focus.z, state.focus.x, state.yaw.to_degrees(), state.pitch.to_degrees());
     }
+
+    events.send(GraphicsEvent::MoveCamera);
 }
 
 pub fn create_camera_position_text(

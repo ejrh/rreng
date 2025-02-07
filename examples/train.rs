@@ -34,7 +34,8 @@ fn main() {
         .add_plugins(track::TrackPlugin)
         .add_plugins(train::TrainPlugin)
         .add_plugins(debug::DebugPlugin)
-        .add_systems(Update, utils::fix_apparent_size);
+        .add_systems(Update, utils::fix_apparent_size)
+        .add_event::<events::GraphicsEvent>();
 
     #[cfg(not(target_arch = "wasm32"))]
     app.add_systems(Update, utils::close_on_esc);
