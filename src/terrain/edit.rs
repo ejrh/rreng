@@ -7,15 +7,15 @@ use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
 use ndarray::{Array2, Ix, Ixs};
 
 use crate::terrain::selection::SelectedPoint;
-use crate::terrain::{Terrain, TerrainLayer};
+use crate::terrain::{TerrainData, TerrainLayer};
 use crate::terrain::utils::Range2;
 
 pub fn click_point(
     buttons: Res<ButtonInput<MouseButton>>,
     selected_point: Res<SelectedPoint>,
-    mut terrain: ResMut<Terrain>,
+    mut terrain_data: ResMut<TerrainData>,
 ) {
-    let elevation = &terrain.layers[&TerrainLayer::Elevation];
+    let elevation = &terrain_data.layers[&TerrainLayer::Elevation];
     let mut _guard = elevation.lock().unwrap();
     let elevation = _guard.deref_mut();
 
@@ -40,17 +40,17 @@ pub fn click_point(
 
     drop(_guard);
 
-    terrain.dirty_range(range);
+    terrain_data.dirty_range(range);
 }
 
 pub fn drag_point(
     buttons: Res<ButtonInput<MouseButton>>,
     selected_point: Res<SelectedPoint>,
-    mut terrain: ResMut<Terrain>,
+    mut terrain_data: ResMut<TerrainData>,
     mut start_point: Local<SelectedPoint>,
     mut gizmos: Gizmos,
 ) {
-    let elevation = &terrain.layers[&TerrainLayer::Elevation];
+    let elevation = &terrain_data.layers[&TerrainLayer::Elevation];
     let mut _guard = elevation.lock().unwrap();
     let elevation = _guard.deref_mut();
 
@@ -98,7 +98,7 @@ pub fn drag_point(
     drop(_guard);
 
     for range in ranges_to_dirty {
-        terrain.dirty_range(range);
+        terrain_data.dirty_range(range);
     }
 }
 

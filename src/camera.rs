@@ -7,7 +7,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::terrain::Terrain;
+use crate::terrain::TerrainData;
 
 pub struct CameraPlugin;
 
@@ -126,7 +126,7 @@ fn camera_movement(time: Res<Time>,
 fn update_camera_position(
     mut query: Query<(&CameraState, &mut Transform), Changed<CameraState>>,
     mut text_query: Query<&mut Text, With<CameraPositionLabel>>,
-    terrain: Res<Terrain>,
+    terrain_data: Res<TerrainData>,
 ) {
     let Ok((state, mut transform)) = query.get_single_mut()
     else { return; };
@@ -135,7 +135,7 @@ fn update_camera_position(
         * Quat::from_axis_angle(Vec3::X, state.pitch);
     let up_to_camera = transform.rotation.mul_vec3(Vec3::Z);
     let mut focus = state.focus;
-    focus.y = terrain.elevation_at(focus.xz());
+    focus.y = terrain_data.elevation_at(focus.xz());
     transform.translation = focus + state.distance * up_to_camera;
 
     /* Update position text if it exists */

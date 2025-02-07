@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::camera::CameraState;
 use crate::terrain::datafile::{DataFile, Track};
-use crate::terrain::{Terrain, TerrainLayer};
+use crate::terrain::{Terrain, TerrainData, TerrainLayer};
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
 use crate::track::point::Point;
 use crate::track::segment::Segment;
@@ -65,6 +65,7 @@ pub fn datafile_loaded(
 pub fn check_loading_state(
     mut loading_state: ResMut<LoadingState>,
     mut terrain: ResMut<Terrain>,
+    mut terrain_data: ResMut<TerrainData>,
     datafile_assets: Res<Assets<DataFile>>,
     tilesets_assets: Res<Assets<TileSets>>,
     asset_server: Res<AssetServer>,
@@ -80,6 +81,7 @@ pub fn check_loading_state(
     info!("Level bounds are: {:?}", datafile.bounds);
 
     terrain.reset(datafile);
+    terrain_data.reset(&terrain, datafile);
 
     /* Process the data file and load the chunk elevations */
     let tilesets_path = asset_server.get_path(&loading_state.tilesets_handle).unwrap();
@@ -118,7 +120,8 @@ pub fn check_loading_state(
 
 pub fn elevation_loaded(
     loading_state: ResMut<LoadingState>,
-    mut terrain: ResMut<Terrain>,
+    terrain: Res<Terrain>,
+    mut terrain_data: ResMut<TerrainData>,
     mut events: EventReader<AssetEvent<ElevationFile>>,
     assets: Res<Assets<ElevationFile>>,
     asset_server: Res<AssetServer>,
@@ -134,7 +137,7 @@ pub fn elevation_loaded(
 
             let tile_corner = Vec2::new(tile.bounds.min.x, tile.bounds.max.y);
             let offset = terrain.coord_to_offset(tile_corner);
-            terrain.set_elevation(offset, elevation_file.heights.view(), *layer);
+            terrain_data.set_elevation(offset, elevation_file.heights.view(), *layer);
         }
     }
 }

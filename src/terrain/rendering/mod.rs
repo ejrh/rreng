@@ -16,7 +16,7 @@ use ndarray::{s, Array2};
 
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
-use crate::terrain::{Terrain, TerrainLayer};
+use crate::terrain::{Terrain, TerrainData, TerrainLayer};
 use crate::terrain::rendering::mesh_tree::{BlockId, BlockKind, MeshTree};
 use crate::terrain::utils::Range2;
 
@@ -96,10 +96,11 @@ pub fn init_render_params(
 
 pub fn update_parents(
     terrain: Res<Terrain>,
+    terrain_data: Res<TerrainData>,
     mut params: ResMut<TerrainRenderParams>,
     mut commands: Commands,
 ) {
-    for layer in terrain.layers.keys() {
+    for layer in terrain_data.layers.keys() {
         params.parent_id.entry(*layer).or_insert_with(|| {
             let tree = MeshTree::new(terrain.num_blocks, MAX_MESH_TREE_LEVEL);
             info!("Mesh tree with {} levels", tree.levels.len());
@@ -115,14 +116,15 @@ pub fn update_parents(
 }
 
 pub fn update_meshes(
-    mut terrain: ResMut<Terrain>,
+    terrain: Res<Terrain>,
+    mut terrain_data: ResMut<TerrainData>,
     params: Res<TerrainRenderParams>,
     mesh_trees: Query<&MeshTree>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
 ) {
     /* Collect affected blocks */
-    let blocks: Vec<_> = terrain.block_info.indexed_iter()
+    let blocks: Vec<_> = terrain_data.block_info.indexed_iter()
         .filter_map(|((i, j), bi)| if bi.dirty { Some((i, j))} else { None })
         .take(RENDERS_PER_FRAME)
         .collect();
@@ -132,7 +134,7 @@ pub fn update_meshes(
     info!("Updating {} blocks", blocks.len());
 
     /* Process each layer */
-    for (layer, elevation) in &terrain.layers {
+    for (layer, elevation) in &terrain_data.layers {
         /* Get the parent, mesh tree, and various render settings for this layer */
         let parent_id = params.parent_id[layer];
         let tree = mesh_trees.get(parent_id).unwrap();
@@ -185,7 +187,7 @@ pub fn update_meshes(
 
     /* Reset these blocks' dirty flag */
     for (i, j) in &blocks {
-        terrain.block_info[(*i, *j)].dirty = false;
+        terrain_data.block_info[(*i, *j)].dirty = false;
     }
 }
 

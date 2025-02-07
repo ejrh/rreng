@@ -41,6 +41,7 @@ impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<Terrain>()
+            .init_resource::<TerrainData>()
             .init_resource::<loading::LoadingState>()
             .init_asset::<tiles::TileSets>()
             .init_asset_loader::<tiles::TileSetsLoader>()
@@ -86,6 +87,10 @@ pub struct Terrain {
     pub resolution: Vec3,
     pub num_blocks: [usize; 2],
     pub point_dims: [usize; 2],
+}
+
+#[derive(Default, Debug, Resource)]
+pub struct TerrainData {
     pub layers: HashMap<TerrainLayer, Arc<Mutex<ndarray::Array2<f32>>>>,
     pub block_info: ndarray::Array2<BlockInfo>,
 }
@@ -98,12 +103,26 @@ impl Terrain {
         self.resolution = Vec3::new(1.0, 1.0, 1.0);
         self.num_blocks = [datafile.size[0] / self.block_size, datafile.size[1] / self.block_size];
         self.point_dims = self.num_blocks.map(|b| self.block_size * b + 1);
+    }
+
+    /**
+     * Coord in in coordinate system space
+     */
+    pub fn coord_to_offset(&self, coord: Vec2) -> (isize, isize) {
+        let c = coord - self.bounds.min;
+
+        (self.size[0] as isize - c.y as isize, c.x as isize)
+    }
+}
+
+impl TerrainData {
+    pub fn reset(&mut self, terrain: &Terrain, datafile: &DataFile) {
         for layer in &datafile.layers {
-            self.layers.insert(*layer, Arc::new(Mutex::new(ndarray::Array2::default(self.point_dims))));
+            self.layers.insert(*layer, Arc::new(Mutex::new(ndarray::Array2::default(terrain.point_dims))));
         }
-        self.block_info = ndarray::Array2::from_shape_fn(self.num_blocks, |(r, c)| BlockInfo {
+        self.block_info = ndarray::Array2::from_shape_fn(terrain.num_blocks, |(r, c)| BlockInfo {
             block_num: (r, c),
-            range: Range2(r * self.block_size..(r+1) * self.block_size + 1, c * self.block_size..(c+1) * self.block_size + 1),
+            range: Range2(r * terrain.block_size..(r+1) * terrain.block_size + 1, c * terrain.block_size..(c+1) * terrain.block_size + 1),
             dirty: false,
         });
     }
@@ -115,8 +134,9 @@ impl Terrain {
         let mut target_layer = target_layer.lock().unwrap();
 
         let data_dims = data.dim();
-        let (from_rows, to_rows) = get_copyable_range(data_dims.0, offset.0, self.point_dims[0]);
-        let (from_cols, to_cols) = get_copyable_range(data_dims.1, offset.1, self.point_dims[1]);
+        let layer_dims = target_layer.dim();
+        let (from_rows, to_rows) = get_copyable_range(data_dims.0, offset.0, layer_dims.0);
+        let (from_cols, to_cols) = get_copyable_range(data_dims.1, offset.1, layer_dims.1);
 
         if from_rows.is_empty() || from_cols.is_empty() { return; }
 
@@ -156,14 +176,5 @@ impl Terrain {
         } else {
             -1.0
         }
-    }
-
-    /**
-     * Coord in in coordinate system space
-     */
-    pub fn coord_to_offset(&self, coord: Vec2) -> (isize, isize) {
-        let c = coord - self.bounds.min;
-
-        (self.size[0] as isize - c.y as isize, c.x as isize)
     }
 }
