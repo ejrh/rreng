@@ -1,8 +1,9 @@
 use bevy::asset::AssetServer;
 use bevy::prelude::*;
 
-use crate::{terrain, toolbar};
-use crate::toolbar::ToolbarButton;
+use crate::terrain;
+use crate::ui::toolbar;
+use crate::ui::toolbar::{Toolbar, ToolbarButton, ToolbarLine, ToolbarPlugin};
 
 pub struct ToolsPlugin;
 
@@ -11,7 +12,7 @@ impl Plugin for ToolsPlugin {
         app
             .init_state::<Tool>()
             .init_state::<TerraformTool>()
-            .add_plugins(toolbar::ToolbarPlugin::default())
+            .add_plugins(ToolbarPlugin::default())
             .init_resource::<Tools>()
             .add_systems(Startup, (create_tools, create_terraform_tools).chain())
             .add_systems(Update, update_tool_buttons)
@@ -83,7 +84,7 @@ fn create_terraform_tools(
     mut tools: ResMut<Tools>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
-    toolbar: Query<Entity, With<toolbar::Toolbar>>,
+    toolbar: Query<Entity, With<Toolbar>>,
 ) {
     let button_font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
@@ -113,7 +114,7 @@ fn update_tool_buttons(
     tools: ResMut<Tools>,
     query: Query<(&Tool, &Interaction), Changed<Interaction>>,
     mut state: ResMut<NextState<Tool>>,
-    mut toolbar_lines: Query<(Entity, &mut Visibility), With<toolbar::ToolbarLine>>,
+    mut toolbar_lines: Query<(Entity, &mut Visibility), With<ToolbarLine>>,
 ) {
     let Some(tool) = query.iter()
         .filter_map(|(tool, interaction)|
