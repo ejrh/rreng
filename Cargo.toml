@@ -5,6 +5,9 @@ edition = "2021"
 rust-version = "1.75"
 default-run = "rreng"
 
+[features]
+trace_tracy = ["bevy/trace_tracy"]
+
 [dependencies]
 earcutr = "0.4"
 geotiff = { git = "https://github.com/georust/geotiff", rev = "4df760b" }
