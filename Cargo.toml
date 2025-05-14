@@ -1,8 +1,8 @@
 [package]
 name = "rreng"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.85.0"
 default-run = "rreng"
 
 [features]
@@ -10,20 +10,18 @@ trace_tracy = ["bevy/trace_tracy"]
 
 [dependencies]
 earcutr = "0.4"
-geotiff = { git = "https://github.com/georust/geotiff", rev = "4df760b" }
+geotiff = { git = "https://github.com/georust/geotiff", rev = "9ccfe90" }
 glob = "0.3"
 noise = "0.9"
 ndarray = "0.16"
-rand = "0.8"
 serde = "1.0"
-serde_json = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 tiff = "0.9"
 toml = "0.8"
 tracing-subscriber = "0.3"
 
 [dependencies.bevy]
-version = "0.15"
+version = "0.16"
 default-features = false
 features = [
     "bevy_winit",
@@ -47,7 +45,7 @@ features = [
 ]
 
 [dependencies.bevy-inspector-egui]
-version = "0.28"
+version = "0.31"
 default-features = false
 features = [
     "bevy_render"

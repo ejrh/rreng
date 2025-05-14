@@ -1,6 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
+use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::terrain::selection::SelectedPoint;
@@ -29,6 +30,7 @@ impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_state::<DebugState>()
+            .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
             .add_plugins(WorldInspectorPlugin::new().run_if(in_state(DebugState::On)))
             .add_systems(Update, (debug_terrain, log_click, show_points, show_lights).run_if(in_state(DebugState::On)))
             .add_systems(Update, (toggle_debug, point_visibility));

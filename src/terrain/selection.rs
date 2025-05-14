@@ -40,12 +40,11 @@ pub fn update_selected_point(
     mut prev_cursor_ray: Local<Option<Ray3d>>,
     mut selected_point: ResMut<SelectedPoint>,
     mut raycast: MeshRayCast,
-    mut marker_query: Query<&mut Transform, With<SelectionMarker>>,
+    mut marker: Single<&mut Transform, With<SelectionMarker>>,
     terrain_meshes: Query<&TerrainMesh>,
-    camera_query: Query<Entity, With<Camera>>,
+    camera_id: Single<Entity, With<Camera>>,
 ) {
-    let camera = camera_query.single();
-    let cursor_ray = ray_map.map().get(&RayId::new(camera, PointerId::Mouse))
+    let cursor_ray = ray_map.map.get(&RayId::new(*camera_id, PointerId::Mouse))
         .copied();
 
     if cursor_ray == *prev_cursor_ray { return }
@@ -57,7 +56,7 @@ pub fn update_selected_point(
         matches!(terrain_meshes.get(e), Ok(TerrainMesh { layer: TerrainLayer::Elevation, .. }))
         // terrain_meshes.contains(e)
     };
-    let settings = RayCastSettings::default()
+    let settings = MeshRayCastSettings::default()
         .with_filter(&filter);
 
     let results = raycast.cast_ray(cursor_ray, &settings);
@@ -71,27 +70,22 @@ pub fn update_selected_point(
 
     selected_point.point = point;
 
-    if let Ok(mut transform) = marker_query.get_single_mut() {
-        transform.translation = point;
-    }
+    marker.translation = point;
 }
 
 #[derive(Component)]
 pub struct CursorPositionLabel;
 
 pub fn update_cursor_position(
-    mut text_query: Query<&mut Text, With<CursorPositionLabel>>,
-    marker_query: Query<&mut Transform, With<SelectionMarker>>,
+    text: Option<Single<&mut Text, With<CursorPositionLabel>>>,
+    marker: Single<&mut Transform, With<SelectionMarker>>,
 ) {
-    let Ok(transform) = marker_query.get_single()
-    else { return; };
-
     /* Update position text if it exists */
-    if let Ok(mut text) = text_query.get_single_mut() {
+    if let Some(mut text) = text {
         text.0 = format!(
-            "Cursor: {:3.2}, {:3.2}; elevation {:3.2}",
-            transform.translation.z, transform.translation.x, transform.translation.y
-        );
+             "Cursor: {:3.2}, {:3.2}; elevation {:3.2}",
+             marker.translation.z, marker.translation.x, marker.translation.y
+         );
     }
 }
 

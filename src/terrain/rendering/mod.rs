@@ -269,12 +269,12 @@ pub fn handle_mesh_tasks(
                 mt.transform,
                 Visibility::Hidden,
                 aabb,
+                ChildOf(parent_id),
             ))
-                .set_parent(parent_id)
                 .id();
 
             if let Some(old_id) = tree.set_mesh(block_id, BlockKind::Populated(id)) {
-                commands.entity(old_id).despawn_recursive();
+                commands.entity(old_id).despawn_related::<Children>();
             }
 
             any_change = true;
@@ -284,21 +284,18 @@ pub fn handle_mesh_tasks(
     }
 
     if any_change {
-        events.send(GraphicsEvent::RenderTerrain);
+        events.write(GraphicsEvent::RenderTerrain);
     }
 }
 
 pub fn select_meshes(
     terrain: Res<Terrain>,
-    camera_query: Query<&GlobalTransform, With<Camera>>,
+    camera: Single<&GlobalTransform, With<Camera>>,
     mesh_trees: Query<&mut MeshTree>,
     mut meshes: Query<(&GlobalTransform, &Aabb, &mut Visibility), Without<Camera>>,
     mut events: EventReader<GraphicsEvent>,
 ) {
     const TOLERANCE: f32 = 50.0;
-
-    let Ok(camera_transform) = camera_query.get_single()
-    else { return };
 
     if !events.read().any(|e|
         matches!(e, GraphicsEvent::MoveCamera | GraphicsEvent::RenderTerrain)
@@ -321,7 +318,7 @@ pub fn select_meshes(
                         let mut too_close = false;
                         if block_id.level > 0 {
                             let centre = mesh_transform.translation() + Vec3::from(aabb.center);
-                            let distance = centre.distance(camera_transform.translation());
+                            let distance = centre.distance(camera.translation());
                             let cutoff = terrain.block_size as f32 * 4.0 * (1 << block_id.level) as f32;
                             too_close = distance < cutoff;
 

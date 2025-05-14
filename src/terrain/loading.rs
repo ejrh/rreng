@@ -119,7 +119,7 @@ pub fn check_loading_state(
         loading_state.created_tracks = true;
     }
 
-    events.send(GraphicsEvent::LoadLevel);
+    events.write(GraphicsEvent::LoadLevel);
 }
 
 pub fn elevation_loaded(
@@ -148,19 +148,17 @@ pub fn elevation_loaded(
 
 pub fn set_camera_range(
     terrain: Res<Terrain>,
-    mut camera_query: Query<&mut CameraState>,
+    mut state: Single<&mut CameraState>,
 ) {
     if !terrain.is_changed() { return; }
     let xrange = (terrain.num_blocks[1] * terrain.block_size) as f32;
     let yrange = 1000.0;
     let zrange = (terrain.num_blocks[0] * terrain.block_size) as f32;
 
-    if let Ok(mut state) = camera_query.get_single_mut() {
-        state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
-        state.focus = state.focus_range.start + state.focus_range.end / 2.0;
-        state.distance_range = 1.0..xrange.max(zrange).max(1.0);
-        state.distance = state.distance_range.end;
-    }
+    state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
+    state.focus = state.focus_range.start + state.focus_range.end / 2.0;
+    state.distance_range = 1.0..xrange.max(zrange).max(1.0);
+    state.distance = state.distance_range.end;
 }
 
 fn create_initial_tracks(
@@ -177,16 +175,23 @@ fn create_initial_tracks(
             )).id();
 
         let point_ids = points.iter()
-            .map(|pt| commands.spawn((Point, Transform::from_translation(*pt))).set_parent(parent_id).id())
+            .map(|pt| commands.spawn((
+                Point,
+                Transform::from_translation(*pt),
+                ChildOf(parent_id)
+            )).id())
             .collect::<Vec<_>>();
 
         let segment_ids: Vec<_> = point_ids.windows(2).map(|w| {
             let [pt1, pt2, ..] = w else { panic!("Expect window of size 2") };
-            commands.spawn(Segment {
-                from_point: *pt1,
-                to_point: *pt2,
-                length: 0.0,
-            }).set_parent(parent_id).id()
+            commands.spawn((
+                Segment {
+                    from_point: *pt1,
+                    to_point: *pt2,
+                    length: 0.0,
+                },
+                ChildOf(parent_id)
+            )).id()
         }).collect();
         info!("created track with {} segments", segment_ids.len());
 

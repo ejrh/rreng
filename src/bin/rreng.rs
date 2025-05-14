@@ -8,7 +8,7 @@ fn main() {
 
     app.add_plugins(RrengPlugin);
     app
-        .add_plugins(FrameTimeDiagnosticsPlugin)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(tools::ToolsPlugin)
         .add_systems(Update, utils::show_fps)
         .add_systems(Startup, utils::show_version)

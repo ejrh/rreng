@@ -1,9 +1,8 @@
 use bevy::asset::{AssetServer, Assets, Handle};
 use bevy::color::Color;
-use bevy::hierarchy::{BuildChildren, DespawnRecursiveExt};
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver, SpotLight};
-use bevy::prelude::{Added, Commands, Entity, GltfAssetLabel, LinearRgba, Mesh, Mesh3d, Meshable, Query, Res, ResMut, Resource, Scene, SceneRoot, Sphere, StandardMaterial, Transform};
+use bevy::prelude::{Added, ChildOf, Children, Commands, Entity, GltfAssetLabel, LinearRgba, Mesh, Mesh3d, Meshable, Query, Res, ResMut, Resource, Scene, SceneRoot, Sphere, StandardMaterial, Transform};
 
 use crate::train::TrainCar;
 
@@ -39,7 +38,7 @@ pub fn render_trains(
     mut commands: Commands,
 ) {
     for train_id in trains.iter() {
-        commands.entity(train_id).despawn_descendants();
+        commands.entity(train_id).despawn_related::<Children>();
 
         /* Spawn train model and fix up its silly model transform */
         commands.spawn((
@@ -47,7 +46,8 @@ pub fn render_trains(
             Transform::default()
                 .with_scale(Vec3::splat(3.28084))
                 .with_rotation(Quat::from_axis_angle(Vec3::Y, 54.0f32.to_radians())),
-        )).set_parent(train_id);
+            ChildOf(train_id)
+        ));
 
         /* Put some spot lights for the train's headlamps */
         for dir in [
@@ -60,7 +60,8 @@ pub fn render_trains(
             commands.spawn((
                 SpotLight::default(),
                 Transform::from_translation(pos).looking_at(target, Vec3::Y),
-            )).set_parent(train_id);
+                ChildOf(train_id),
+            ));
 
             /* A glowing orb on each of the train's headlights */
             for light in [
@@ -75,7 +76,8 @@ pub fn render_trains(
                     NotShadowCaster,
                     NotShadowReceiver,
                     Transform::from_translation(pos),
-                )).set_parent(train_id);
+                    ChildOf(train_id),
+                ));
             }
         }
     }

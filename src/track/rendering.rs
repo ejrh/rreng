@@ -84,7 +84,7 @@ pub fn update_track_meshes(
     mut commands: Commands,
 ) {
     for (segment_id, segment, linkage, segment_transform) in segments.iter() {
-        commands.entity(segment_id).despawn_descendants();
+        commands.entity(segment_id).despawn_related::<Children>();
 
         let open_start = linkage.prev_segment.is_some();
         let open_end = linkage.next_segment.is_some();
@@ -103,7 +103,8 @@ pub fn update_track_meshes(
         commands.spawn((
             Mesh3d(meshes.add(rail_mesh)),
             MeshMaterial3d(params.rail_material.clone()),
-        )).set_parent(segment_id);
+            ChildOf(segment_id)
+        ));
 
         let num_sleepers = f32::round(segment.length / params.sleeper_spacing) as usize;
         let sleeper_offset = segment.length / (num_sleepers as f32);
@@ -113,14 +114,16 @@ pub fn update_track_meshes(
                 Mesh3d(params.sleeper_mesh.clone()),
                 MeshMaterial3d(params.sleeper_material.clone()),
                 sleeper_transform,
-            )).set_parent(segment_id);
+                ChildOf(segment_id)
+            ));
         }
 
         let bed_mesh = create_bed_mesh(&params, segment.length, open_start, open_end, start_normal, end_normal);
         commands.spawn((
             Mesh3d(meshes.add(bed_mesh)),
             MeshMaterial3d(params.bed_material.clone()),
-        )).set_parent(segment_id);
+            ChildOf(segment_id)
+        ));
     }
 }
 
@@ -132,7 +135,7 @@ fn create_rail_mesh(params: &TrackRenderParams, length: f32, open_start: bool, o
     let mut mesh = extrusion(&verts, length, open_start, open_end, start_normal, end_normal);
 
     let verts: Vec<_> = rail_profile.vertices.iter().map(|pt| Vec2::new(pt.x - GAUGE/2.0, pt.y + params.rail_height)).collect::<Vec<_>>();
-    mesh.merge(&extrusion(&verts, length, open_start, open_end, start_normal, end_normal));
+    mesh.merge(&extrusion(&verts, length, open_start, open_end, start_normal, end_normal)).expect("mesh.merge");
 
     mesh
 }

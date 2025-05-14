@@ -84,13 +84,11 @@ fn create_terraform_tools(
     mut tools: ResMut<Tools>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
-    toolbar: Query<Entity, With<Toolbar>>,
+    toolbar_id: Single<Entity, With<Toolbar>>,
 ) {
     let button_font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
-    let toolbar_id = toolbar.single();
-
-    let toolbar_line_id = toolbar::create_line(&mut commands, toolbar_id)
+    let toolbar_line_id = toolbar::create_line(&mut commands, *toolbar_id)
         .insert(Visibility::Hidden)
         .id();
 

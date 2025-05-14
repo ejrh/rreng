@@ -53,8 +53,9 @@ pub fn create_line<'a>(commands: &'a mut Commands, toolbar_id: Entity) -> Entity
                 height: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 ..default()
-            }))
-        .set_parent(toolbar_id)
+            },
+            ChildOf(toolbar_id)
+        ))
         .id();
 
     commands.entity(toolbar_line_id)
@@ -80,8 +81,8 @@ pub fn create_button<'a>(commands: &'a mut Commands, toolbar_line_id: Entity, en
             BorderColor(Color::WHITE),
             BorderRadius::all(Val::Px(10.0)),
             BackgroundColor(Color::BLACK),
+            ChildOf(toolbar_line_id)
         ))
-        .set_parent(toolbar_line_id)
         .id();
 
     commands.entity(button_id)

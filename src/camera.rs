@@ -60,9 +60,9 @@ fn create_camera(mut commands: Commands) {
 
 fn camera_movement(time: Res<Time>,
                    keyboard_input: Res<ButtonInput<KeyCode>>,
-                   mut query: Query<(&mut CameraState, &mut Transform)>
+                   mut camera: Single<(&mut CameraState, &Transform)>
 ) {
-    let (mut state, transform) = query.single_mut();
+    let (state, transform) = &mut *camera;
 
     let mut movement_delta = Vec3::ZERO;
     let mut yaw_delta = 0.0;
@@ -124,13 +124,12 @@ fn camera_movement(time: Res<Time>,
 }
 
 fn update_camera_position(
-    mut query: Query<(&CameraState, &mut Transform), Changed<CameraState>>,
-    mut text_query: Query<&mut Text, With<CameraPositionLabel>>,
+    mut camera: Single<(&CameraState, &mut Transform), Changed<CameraState>>,
+    text: Option<Single<&mut Text, With<CameraPositionLabel>>>,
     terrain_data: Res<TerrainData>,
     mut events: EventWriter<GraphicsEvent>,
 ) {
-    let Ok((state, mut transform)) = query.get_single_mut()
-    else { return; };
+    let (state, transform) = &mut *camera;
 
     transform.rotation = Quat::from_axis_angle(Vec3::Y, state.yaw)
         * Quat::from_axis_angle(Vec3::X, state.pitch);
@@ -140,12 +139,12 @@ fn update_camera_position(
     transform.translation = focus + state.distance * up_to_camera;
 
     /* Update position text if it exists */
-    if let Ok(mut text) = text_query.get_single_mut() {
+    if let Some(mut text) = text {
         text.0 = format!("Camera: focus {:3.0}, {:3.0}; yaw {:3.0}; pitch {:3.0}",
-                                         state.focus.z, state.focus.x, state.yaw.to_degrees(), state.pitch.to_degrees());
+        state.focus.z, state.focus.x, state.yaw.to_degrees(), state.pitch.to_degrees());
     }
 
-    events.send(GraphicsEvent::MoveCamera);
+    events.write(GraphicsEvent::MoveCamera);
 }
 
 pub fn create_camera_position_text(

@@ -4,16 +4,14 @@ use bevy::color::palettes::basic::{GRAY, YELLOW};
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 
-pub fn show_fps(diagnostics: Res<DiagnosticsStore>, mut windows: Query<&mut Window>) {
+pub fn show_fps(diagnostics: Res<DiagnosticsStore>, mut window: Single<&mut Window>) {
     let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS)
         else { return; };
 
     let Some(value) = fps.smoothed()
         else { return; };
 
-    if let Ok(mut window) = windows.get_single_mut() {
-        window.title = format!("FPS: {}", value);
-    }
+    window.title = format!("FPS: {}", value);
 }
 
 pub fn show_version(
@@ -74,7 +72,7 @@ pub fn close_on_esc(
     mut app_exit_events: EventWriter<AppExit>,
 ) {
     if input.just_pressed(KeyCode::Escape) {
-        app_exit_events.send(AppExit::Success);
+        app_exit_events.write(AppExit::Success);
     }
 }
 
@@ -82,12 +80,9 @@ pub fn close_on_esc(
 pub struct ConstantApparentSize(pub Range<f32>);
 
 pub fn fix_apparent_size(
-    camera_query: Query<&GlobalTransform, With<Camera>>,
+    camera_transform: Single<&GlobalTransform, With<Camera>>,
     mut query: Query<(&mut Transform, &GlobalTransform, &ConstantApparentSize)>,
 ) {
-    let Ok(camera_transform) = camera_query.get_single()
-    else { return; };
-
     for (mut transform, global_transform, size) in query.iter_mut() {
         let dist = camera_transform.translation().distance(global_transform.translation());
 

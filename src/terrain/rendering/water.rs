@@ -1,5 +1,5 @@
 use bevy::asset::Assets;
-use bevy::prelude::{info, BuildChildren, Commands, Cuboid, DespawnRecursiveExt, Mesh, Mesh3d, MeshMaterial3d, Name, Res, ResMut, Transform, Vec3, Visibility};
+use bevy::prelude::{info, ChildOf, Children, Commands, Cuboid, Mesh, Mesh3d, MeshMaterial3d, Name, Res, ResMut, Transform, Vec3, Visibility};
 
 use crate::terrain::rendering::TerrainRenderParams;
 use crate::terrain::Terrain;
@@ -11,7 +11,7 @@ pub fn update_water(
     mut commands: Commands,
 ) {
     if let Some(existing_water_id) = params.water_id {
-        commands.entity(existing_water_id).despawn_recursive();
+        commands.entity(existing_water_id).despawn_related::<Children>();
     }
 
     let water_id = commands.spawn((
@@ -27,7 +27,8 @@ pub fn update_water(
     commands.spawn((
         Mesh3d(meshes.add(mesh)),
         MeshMaterial3d(params.water_material.clone()),
-   )).set_parent(water_id);
+        ChildOf(water_id)
+   ));
 
     info!("Creating water of size {size}");
 }

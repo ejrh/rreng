@@ -1,4 +1,4 @@
-use bevy::prelude::{App, IntoSystemConfigs, Plugin, PostUpdate, Startup, Update};
+use bevy::prelude::{App, IntoScheduleConfigs, Plugin, PostUpdate, Startup, Update};
 
 use crate::track::point::Point;
 use crate::track::segment::{Segment, SegmentLinkage};

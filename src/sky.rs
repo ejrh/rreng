@@ -35,6 +35,7 @@ fn create_lights(
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
         brightness: 50.0,
+        ..default()
     });
 
     let sun_mesh: Mesh = Sphere::new(SUN_RADIUS).into();
@@ -68,10 +69,10 @@ fn create_lights(
 
 fn move_sun(
     time: Res<Time>,
-    mut sun_query: Query<(&mut Sun, &mut Transform)>,
-    mut light_query: Query<&mut DirectionalLight>,
+    mut sun: Single<(&mut Sun, &mut Transform)>,
+    mut light: Single<&mut DirectionalLight>,
 ) {
-    let (mut sun, mut transform) = sun_query.single_mut();
+    let (sun, transform) = &mut *sun;
 
     sun.angle += TAU/sun.period * time.delta_secs();
     let rounded_angle = (sun.angle.to_degrees() * 10.0).round().to_radians() * 0.1;
@@ -79,8 +80,6 @@ fn move_sun(
     transform.translation = transform.rotation.mul_vec3(Vec3::new(SUN_DISTANCE, 0.0, 0.0));
 
     let altitude = transform.translation.y / SUN_DISTANCE;
-
-    let mut light = light_query.single_mut();
 
     if altitude > 0.5 {
         light.color = Color::WHITE;
