@@ -274,7 +274,7 @@ pub fn handle_mesh_tasks(
                 .id();
 
             if let Some(old_id) = tree.set_mesh(block_id, BlockKind::Populated(id)) {
-                commands.entity(old_id).despawn_related::<Children>();
+                commands.entity(old_id).despawn();
             }
 
             any_change = true;

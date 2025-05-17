@@ -11,7 +11,7 @@ pub fn update_water(
     mut commands: Commands,
 ) {
     if let Some(existing_water_id) = params.water_id {
-        commands.entity(existing_water_id).despawn_related::<Children>();
+        commands.entity(existing_water_id).despawn();
     }
 
     let water_id = commands.spawn((
