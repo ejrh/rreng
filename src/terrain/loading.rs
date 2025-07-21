@@ -31,10 +31,10 @@ pub fn load_initial_terrain(
     mut loading_state: ResMut<LoadingState>,
     asset_server: Res<AssetServer>,
 ) {
-    loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.toml");
+    loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
     match loading_state.datafile_handle.id() {
         AssetId::Uuid { uuid } if uuid == AssetId::<DataFile>::DEFAULT_UUID =>
-            loading_state.datafile_handle = asset_server.load::<DataFile>("data/jvl.toml"),
+            loading_state.datafile_handle = asset_server.load::<DataFile>("data/jvl.ron"),
         _ => (),
     };
 }

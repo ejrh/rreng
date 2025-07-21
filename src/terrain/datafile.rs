@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use bevy::asset::{Asset, AssetLoader, AsyncReadExt, LoadContext};
 use bevy::asset::io::Reader;
 use bevy::prelude::*;
@@ -26,8 +27,8 @@ pub struct DataFile {
 pub enum DataFileLoaderError {
     #[error("Could not load asset: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Could not deserialise TOML: {0}")]
-    Toml(#[from] toml::de::Error),
+    #[error("Could not deserialise datafile: {0}")]
+    Ron(#[from] ron::de::SpannedError),
 }
 
 #[derive(Default)]
@@ -44,15 +45,15 @@ impl AssetLoader for DataFileLoader {
         _settings: &Self::Settings,
         load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
-        load_context.load::<TileSets>("data/tiles.toml");
+        load_context.load::<TileSets>("data/tiles.ron");
 
         let mut str = String::new();
         reader.read_to_string(&mut str).await?;
-        let datafile = toml::from_str(&str)?;
+        let datafile = ron::from_str(&str)?;
         Ok(datafile)
     }
 
     fn extensions(&self) -> &[&str] {
-        &["toml"]
+        &["ron"]
     }
 }

@@ -15,10 +15,10 @@ glob = "0.3"
 noise = "0.9"
 ndarray = "0.16"
 rand = "0.9"
+ron = "0.10"
 serde = "1.0"
 thiserror = "2.0"
 tiff = "0.9"
-toml = "0.8"
 tracing-subscriber = "0.3"
 
 [dependencies.bevy]

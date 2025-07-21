@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use rreng::terrain::tiles::{Tile, TileSet, TileSets};
 
-const TILESETS_PATH: &str = "assets/data/tiles.toml";
+const TILESETS_PATH: &str = "assets/data/tiles.ron";
 
 #[derive(Error, Debug)]
 enum ScanError {
@@ -20,13 +20,13 @@ enum ScanError {
 fn load_tilesets(path: &Path) -> Result<TileSets, std::io::Error> {
     let f = std::fs::File::open(path)?;
     let str = std::io::read_to_string(f)?;
-    let tilesets = toml::from_str(&str).unwrap();
+    let tilesets = ron::from_str(&str).unwrap();
     Ok(tilesets)
 }
 
 fn save_tilesets(tilesets: &TileSets, path: &Path) -> Result<(), std::io::Error> {
     let mut f = std::fs::File::create(path)?;
-    let str = toml::to_string(&tilesets).unwrap();
+    let str = ron::ser::to_string_pretty(&tilesets, ron::ser::PrettyConfig::new()).unwrap();
     f.write_all(str.as_bytes())?;
     Ok(())
 }

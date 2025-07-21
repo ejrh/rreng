@@ -24,7 +24,7 @@ pub struct TileSet {
     pub files: HashMap<String, Tile>,
 }
 
-#[derive(Asset, Debug, Deserialize, Serialize, TypePath)]
+#[derive(Asset, Debug, Default, Deserialize, Serialize, TypePath)]
 pub struct TileSets(pub HashMap<String, TileSet>);
 
 #[non_exhaustive]
@@ -32,8 +32,8 @@ pub struct TileSets(pub HashMap<String, TileSet>);
 pub enum TileSetsLoaderError {
     #[error("Could not load asset: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Could not deserialise TOML: {0}")]
-    Toml(#[from] toml::de::Error),
+    #[error("Could not deserialise tiles: {0}")]
+    Ron(#[from] ron::de::SpannedError),
 }
 
 #[derive(Default)]
@@ -52,12 +52,12 @@ impl AssetLoader for TileSetsLoader {
     ) -> Result<Self::Asset, Self::Error> {
         let mut str = String::new();
         reader.read_to_string(&mut str).await?;
-        let tilesets = toml::from_str(&str)?;
+        let tilesets = ron::from_str(&str)?;
         Ok(tilesets)
     }
 
     fn extensions(&self) -> &[&str] {
-        &["toml"]
+        &["ron"]
     }
 }
 
@@ -67,7 +67,7 @@ pub enum ElevationFileLoaderError {
     #[error("Could not load asset: {0}")]
     Io(#[from] std::io::Error),
     #[error("Could not decode TIF: {0}")]
-    Toml(#[from] toml::de::Error),
+    TIF(String),
 }
 
 #[derive(Asset, Debug, TypePath)]
@@ -109,7 +109,8 @@ pub fn decode_elevation(bytes: &[u8]) -> Result<ElevationFile, ElevationFileLoad
     let height = dims.1 as usize;
 
     let im = decoder.read_image().unwrap();
-    let DecodingResult::F32(raw_data) = im else { panic!() };
+    let DecodingResult::F32(raw_data) = im
+    else { return Err(ElevationFileLoaderError::TIF("Expected 32-bit float data type".into())) };
 
     let mut data = ndarray::Array2::zeros((height, width));
 
