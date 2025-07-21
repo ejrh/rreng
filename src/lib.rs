@@ -13,6 +13,7 @@ pub mod track;
 pub mod train;
 pub mod ui;
 pub mod utils;
+pub mod worker;
 
 pub struct RrengPlugin;
 
@@ -30,6 +31,7 @@ impl Plugin for RrengPlugin {
             .add_plugins(terrain::TerrainPlugin)
             .add_plugins(track::TrackPlugin)
             .add_plugins(train::TrainPlugin)
+            .add_plugins(worker::WorkerPlugin)
             .add_plugins(debug::DebugPlugin)
             .add_systems(Update, utils::fix_apparent_size)
             .add_event::<events::GraphicsEvent>();

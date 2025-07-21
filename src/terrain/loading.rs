@@ -119,6 +119,8 @@ pub fn check_loading_state(
         loading_state.created_tracks = true;
     }
 
+    crate::worker::create_workers(&terrain, commands, 1);
+
     events.write(GraphicsEvent::LoadLevel);
 }
 
