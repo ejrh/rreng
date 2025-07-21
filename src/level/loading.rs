@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use crate::camera::CameraState;
 use crate::events::GraphicsEvent;
-use crate::terrain::datafile::{DataFile, Track};
+use crate::level::datafile::{DataFile, TrackToLoad};
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
 use crate::track::point::Point;
@@ -27,7 +27,7 @@ impl LoadingState {
     }
 }
 
-pub fn load_initial_terrain(
+pub fn load_initial_level(
     mut loading_state: ResMut<LoadingState>,
     asset_server: Res<AssetServer>,
 ) {
@@ -168,7 +168,7 @@ fn create_initial_tracks(
     commands: &mut Commands
 ) {
     /* Create existing tracks */
-    for (name, Track {points }) in datafile.tracks.iter() {
+    for (name, TrackToLoad {points }) in datafile.tracks.iter() {
         let parent_id = commands
             .spawn((
                 Name::new(format!("Track:{name}")),

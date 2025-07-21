@@ -6,6 +6,7 @@ use bevy::prelude::{default, WindowPlugin};
 pub mod camera;
 pub mod debug;
 pub mod events;
+pub mod level;
 pub mod sky;
 pub mod terrain;
 pub mod tools;
@@ -28,6 +29,7 @@ impl Plugin for RrengPlugin {
                     .set(window_plugin)
             ).add_plugins(camera::CameraPlugin)
             .add_plugins(sky::SkyPlugin)
+            .add_plugins(level::LevelPlugin)
             .add_plugins(terrain::TerrainPlugin)
             .add_plugins(track::TrackPlugin)
             .add_plugins(train::TrainPlugin)

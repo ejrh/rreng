@@ -6,7 +6,7 @@ use bevy::log::info_span;
 use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
 use ndarray::{Array2, Ix, Ixs};
 
-use crate::terrain::selection::SelectedPoint;
+use crate::level::selection::SelectedPoint;
 use crate::terrain::{TerrainData, TerrainLayer};
 use crate::terrain::utils::Range2;
 

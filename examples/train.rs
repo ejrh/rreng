@@ -3,8 +3,8 @@ use bevy::asset::{Assets, Handle};
 use bevy::ecs::system::ResMut;
 
 use rreng::RrengPlugin;
-use rreng::terrain::datafile::DataFile;
-use rreng::terrain::loading::LoadingState;
+use rreng::level::datafile::DataFile;
+use rreng::level::loading::LoadingState;
 
 fn main() {
     let mut app = App::new();

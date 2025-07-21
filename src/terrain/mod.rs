@@ -5,17 +5,14 @@ use bevy::prelude::*;
 use ndarray::s;
 use serde::{Deserialize, Serialize};
 
-use crate::terrain::datafile::DataFile;
 use crate::terrain::utils::{get_copyable_range, Range2};
+use crate::level::datafile::DataFile;
 
 pub mod creation;
-pub mod datafile;
 pub mod edit;
 pub mod heightmap;
-pub mod loading;
 pub mod rendering;
 pub mod rtin;
-pub mod selection;
 pub mod tiles;
 pub mod utils;
 
@@ -42,27 +39,11 @@ impl Plugin for TerrainPlugin {
         app
             .init_resource::<Terrain>()
             .init_resource::<TerrainData>()
-            .init_resource::<loading::LoadingState>()
             .init_asset::<tiles::TileSets>()
             .init_asset_loader::<tiles::TileSetsLoader>()
-            .init_asset::<DataFile>()
-            .init_asset_loader::<datafile::DataFileLoader>()
             .init_asset::<tiles::ElevationFile>()
             .init_asset_loader::<tiles::ElevationFileLoader>()
-            .add_plugins(rendering::TerrainRenderingPlugin)
-            .add_systems(Startup, loading::load_initial_terrain)
-            .add_systems(Update, loading::tilesets_loaded)
-            .add_systems(Update, loading::datafile_loaded)
-            .add_systems(Update, loading::elevation_loaded)
-            .add_systems(Update, (loading::check_loading_state, loading::set_camera_range)
-                .run_if(resource_changed::<loading::LoadingState>))
-            .init_resource::<selection::SelectedPoint>();
-
-        app
-            .add_systems(Startup, selection::create_marker)
-            .add_systems(Update, selection::update_selected_point)
-            .add_systems(Update, selection::update_cursor_position)
-            .add_systems(Startup, selection::create_cursor_position_text);
+            .add_plugins(rendering::TerrainRenderingPlugin);
     }
 }
 

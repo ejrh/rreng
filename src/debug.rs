@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_inspector_egui::bevy_egui::EguiPlugin;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
-use crate::terrain::selection::SelectedPoint;
+use crate::level::selection::SelectedPoint;
 use crate::terrain::Terrain;
 use crate::track::point::Point;
 

@@ -10,7 +10,7 @@ use crate::terrain::TerrainLayer;
 use crate::terrain::tiles::TileSets;
 
 #[derive(Clone, Debug, Default, Deserialize)]
-pub struct Track {
+pub struct TrackToLoad {
     pub points: Vec<Vec3>,
 }
 
@@ -19,7 +19,7 @@ pub struct DataFile {
     pub size: [usize; 2],
     pub layers: Vec<TerrainLayer>,
     pub bounds: Rect,
-    pub tracks: HashMap<String, Track>,
+    pub tracks: HashMap<String, TrackToLoad>,
 }
 
 #[non_exhaustive]
