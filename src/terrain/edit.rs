@@ -16,7 +16,7 @@ pub fn click_point(
     mut terrain_data: ResMut<TerrainData>,
 ) {
     let elevation = &terrain_data.layers[&TerrainLayer::Elevation];
-    let mut _guard = elevation.lock().unwrap();
+    let mut _guard = elevation.write().unwrap();
     let elevation = _guard.deref_mut();
 
     let left = buttons.pressed(MouseButton::Left);
@@ -51,7 +51,7 @@ pub fn drag_point(
     mut gizmos: Gizmos,
 ) {
     let elevation = &terrain_data.layers[&TerrainLayer::Elevation];
-    let mut _guard = elevation.lock().unwrap();
+    let mut _guard = elevation.write().unwrap();
     let elevation = _guard.deref_mut();
 
     if buttons.just_pressed(MouseButton::Left) {

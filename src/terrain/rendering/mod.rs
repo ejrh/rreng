@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use bevy::{
     prelude::*,
@@ -216,14 +216,14 @@ fn queue_mesh_task(
     material: Handle<StandardMaterial>,
     threshold: f32,
     spacing: i32,
-    data: Arc<Mutex<Array2<f32>>>,
+    data: Arc<RwLock<Array2<f32>>>,
     range: Range2,
     queue: &mut Vec<MeshTask>
 ) {
     let thread_pool = AsyncComputeTaskPool::get();
 
     let task = thread_pool.spawn(async move {
-        let data = data.lock().unwrap();
+        let data = data.read().unwrap();
         let elevation_view = data.slice(s!(range.0.clone();spacing, range.1.clone();spacing));
         create_mesh(elevation_view, &Vec3::new(spacing as f32, 1.0, spacing as f32), threshold)
     });

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 use bevy::prelude::*;
 use ndarray::s;
@@ -91,7 +91,7 @@ pub struct Terrain {
 
 #[derive(Default, Debug, Resource)]
 pub struct TerrainData {
-    pub layers: HashMap<TerrainLayer, Arc<Mutex<ndarray::Array2<f32>>>>,
+    pub layers: HashMap<TerrainLayer, Arc<RwLock<ndarray::Array2<f32>>>>,
     pub block_info: ndarray::Array2<BlockInfo>,
 }
 
@@ -118,7 +118,7 @@ impl Terrain {
 impl TerrainData {
     pub fn reset(&mut self, terrain: &Terrain, datafile: &DataFile) {
         for layer in &datafile.layers {
-            self.layers.insert(*layer, Arc::new(Mutex::new(ndarray::Array2::default(terrain.point_dims))));
+            self.layers.insert(*layer, Arc::new(RwLock::new(ndarray::Array2::default(terrain.point_dims))));
         }
         self.block_info = ndarray::Array2::from_shape_fn(terrain.num_blocks, |(r, c)| BlockInfo {
             block_num: (r, c),
@@ -131,7 +131,7 @@ impl TerrainData {
         /* Clone the layer reference so we aren't still borrowing it when we
            want to call self.dirty_range */
         let target_layer = self.layers[&layer].clone();
-        let mut target_layer = target_layer.lock().unwrap();
+        let mut target_layer = target_layer.write().unwrap();
 
         let data_dims = data.dim();
         let layer_dims = target_layer.dim();
@@ -169,7 +169,7 @@ impl TerrainData {
         }
 
         let elevation = &self.layers[&TerrainLayer::Elevation];
-        let elevation = elevation.lock().unwrap();
+        let elevation = elevation.read().unwrap();
 
         if r < elevation.dim().0 && c < elevation.dim().1 {
             elevation[(r, c)]
