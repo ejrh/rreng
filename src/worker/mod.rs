@@ -76,11 +76,11 @@ pub fn create_workers(
         )).id();
 
     for _ in 0..num_workers {
-        let mut rng = rand::rng();
+        let mut rng = rand::thread_rng();
         let pos = Vec3::new(
-            rng.random_range(0.0..(terrain.size[1] as f32)),
+            rng.gen_range(0.0..(terrain.size[1] as f32)),
             0.0,
-            rng.random_range(0.0..(terrain.size[0] as f32))
+            rng.gen_range(0.0..(terrain.size[0] as f32))
         );
         commands.spawn((
             Worker { acceleration: 1.0, ..default() }, Transform::from_translation(pos),

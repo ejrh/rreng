@@ -14,7 +14,7 @@ geotiff = { git = "https://github.com/georust/geotiff", rev = "9ccfe90" }
 glob = "0.3"
 noise = "0.9"
 ndarray = "0.16"
-rand = "0.9"
+rand = "0.8"
 ron = "0.10"
 serde = "1.0"
 thiserror = "2.0"

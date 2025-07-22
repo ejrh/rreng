@@ -18,11 +18,11 @@ pub fn update_workers(
         match *b {
             Behaviour::Idle => {
                 if time.elapsed() - w.behaviour_since > Duration::from_secs_f32(10.0) {
-                    let mut rng = rand::rng();
+                    let mut rng = rand::thread_rng();
                     let mut target = Vec3::new(
-                        rng.random_range(0.0..(terrain.size[1] as f32)),
+                        rng.gen_range(0.0..(terrain.size[1] as f32)),
                         0.0,
-                        rng.random_range(0.0..(terrain.size[0] as f32))
+                        rng.gen_range(0.0..(terrain.size[0] as f32))
                     );
                     target.y = terrain_data.elevation_at(target.xz());
                     *b = Behaviour::WalkingTo(target);
