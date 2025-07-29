@@ -1,5 +1,5 @@
 use bevy::asset::Assets;
-use bevy::prelude::{info, ChildOf, Children, Commands, Cuboid, Mesh, Mesh3d, MeshMaterial3d, Name, Res, ResMut, Transform, Vec3, Visibility};
+use bevy::prelude::{info, ChildOf, Commands, Cuboid, Mesh, Mesh3d, MeshMaterial3d, Name, Res, ResMut, Transform, Vec3, Visibility};
 
 use crate::terrain::rendering::TerrainRenderParams;
 use crate::terrain::Terrain;
@@ -10,6 +10,9 @@ pub fn update_water(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
+    let Some(level_id) = params.level_id
+    else { return; };
+
     if let Some(existing_water_id) = params.water_id {
         commands.entity(existing_water_id).despawn();
     }
@@ -18,6 +21,7 @@ pub fn update_water(
         Name::new("Water"),
         Visibility::default(),
         Transform::default(),
+        ChildOf(level_id),
     )).id();
     params.water_id = Some(water_id);
 

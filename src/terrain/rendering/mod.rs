@@ -52,6 +52,7 @@ const MAX_MESH_TREE_LEVEL: usize = 4;
 
 #[derive(Resource)]
 pub struct TerrainRenderParams {
+    pub(crate) level_id: Option<Entity>,
     parent_id: HashMap<TerrainLayer, Entity>,
     dirt_material: Handle<StandardMaterial>,
     grass_material: Handle<StandardMaterial>,
@@ -83,6 +84,7 @@ pub fn init_render_params(
     water_material.perceptual_roughness = 0.75;
     water_material.reflectance = 0.25;
     let params = TerrainRenderParams {
+        level_id: None,
         parent_id: HashMap::new(),
         dirt_material: materials.add(dirt_material),
         grass_material: materials.add(grass_material),
@@ -98,6 +100,9 @@ pub fn update_parents(
     mut params: ResMut<TerrainRenderParams>,
     mut commands: Commands,
 ) {
+    let Some(level_id) = params.level_id
+    else { return; };
+
     for layer in terrain_data.layers.keys() {
         params.parent_id.entry(*layer).or_insert_with(|| {
             let tree = MeshTree::new(terrain.num_blocks, MAX_MESH_TREE_LEVEL);
@@ -108,6 +113,7 @@ pub fn update_parents(
                 Visibility::default(),
                 Transform::default(),
                 tree,
+                ChildOf(level_id),
             )).id()
         });
     }
@@ -133,7 +139,9 @@ pub fn update_meshes(
     /* Process each layer */
     for (layer, elevation) in &terrain_data.layers {
         /* Get the parent, mesh tree, and various render settings for this layer */
-        let parent_id = params.parent_id[layer];
+        let Some(parent_id) = params.parent_id.get(layer).copied()
+        else { continue; };
+
         let tree = mesh_trees.get(parent_id).unwrap();
 
         let (layer_height_adjust, layer_material) = match layer {

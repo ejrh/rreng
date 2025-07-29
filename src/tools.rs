@@ -14,7 +14,6 @@ impl Plugin for ToolsPlugin {
             .init_state::<TerraformTool>()
             .add_plugins(ToolbarPlugin::default())
             .init_resource::<Tools>()
-            .add_systems(Startup, (create_tools, create_terraform_tools).chain())
             .add_systems(Update, update_tool_buttons)
             .add_systems(Update, update_terraform_tool_buttons)
             .add_systems(Update, (
@@ -25,7 +24,7 @@ impl Plugin for ToolsPlugin {
 }
 
 #[derive(Resource)]
-struct Tools {
+pub struct Tools {
     terraform_line_id: Entity,
 }
 
@@ -56,7 +55,7 @@ enum TerraformTool {
     Smooth,
 }
 
-fn create_tools(
+pub(crate) fn create_tools(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
 ) {
@@ -80,7 +79,7 @@ fn create_tools(
     }
 }
 
-fn create_terraform_tools(
+pub fn create_terraform_tools(
     mut tools: ResMut<Tools>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,

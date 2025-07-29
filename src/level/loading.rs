@@ -1,15 +1,16 @@
 use std::collections::HashMap;
-
+use std::f32::consts::TAU;
 use bevy::prelude::*;
 
-use crate::camera::CameraState;
-use crate::events::GraphicsEvent;
+use crate::camera::{CameraMode, CameraState};
+use crate::events::GameEvent;
 use crate::level::datafile::{DataFile, TrackToLoad};
+use crate::screens::Screen;
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
+use crate::terrain::rendering::TerrainRenderParams;
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
-use crate::track::point::Point;
-use crate::track::segment::Segment;
-use crate::train::TrainCar;
+use crate::track::create_track;
+use crate::train::create_train;
 
 #[derive(Debug, Default, Resource)]
 pub struct LoadingState {
@@ -25,18 +26,6 @@ impl LoadingState {
             .find(|(h, _)| h.id() == asset_id)
             .map(|(_, tile)| tile)
     }
-}
-
-pub fn load_initial_level(
-    mut loading_state: ResMut<LoadingState>,
-    asset_server: Res<AssetServer>,
-) {
-    loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
-    match loading_state.datafile_handle.id() {
-        AssetId::Uuid { uuid } if uuid == AssetId::<DataFile>::DEFAULT_UUID =>
-            loading_state.datafile_handle = asset_server.load::<DataFile>("data/jvl.ron"),
-        _ => (),
-    };
 }
 
 pub fn tilesets_loaded(
@@ -70,8 +59,8 @@ pub fn check_loading_state(
     datafile_assets: Res<Assets<DataFile>>,
     tilesets_assets: Res<Assets<TileSets>>,
     asset_server: Res<AssetServer>,
+    mut render_params: ResMut<TerrainRenderParams>,
     mut commands: Commands,
-    mut events: EventWriter<GraphicsEvent>,
 ) {
     let Some(tilesets) = tilesets_assets.get(&loading_state.tilesets_handle)
     else { return };
@@ -114,14 +103,33 @@ pub fn check_loading_state(
         loading_state.elevation_handles.extend(new_elevation_handles);
     }
 
+    let parent_id = commands.spawn((
+        Name::new("Level"),
+        Transform::default(),
+        Visibility::default(),
+    )).id();
+
     if !loading_state.created_tracks {
-        create_initial_tracks(datafile, &mut commands);
+        /* Create existing tracks */
+        for (name, TrackToLoad {points }) in datafile.tracks.iter() {
+            let (track_id, _, segment_ids) = create_track(name, points, false, &mut commands);
+
+            /* Put a train at the start of the first segment */
+            let first_segment_id = segment_ids[0];
+            let train_id = create_train(name, first_segment_id, 0.0, 0.01, &mut commands);
+
+            commands.entity(track_id).insert(ChildOf(parent_id));
+            commands.entity(train_id).insert(ChildOf(parent_id));
+        }
+
         loading_state.created_tracks = true;
     }
 
-    crate::worker::create_workers(&terrain, commands, 1);
+    crate::worker::create_workers(&terrain, &mut commands, 1);
 
-    events.write(GraphicsEvent::LoadLevel);
+    render_params.level_id = Some(parent_id);
+
+    commands.send_event(GameEvent::LoadingComplete);
 }
 
 pub fn elevation_loaded(
@@ -159,58 +167,39 @@ pub fn set_camera_range(
 
     state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
     state.focus = state.focus_range.start + state.focus_range.end / 2.0;
+    state.yaw_range = None;
+    state.pitch_range = -TAU/4.0..TAU/4.0;
     state.distance_range = 1.0..xrange.max(zrange).max(1.0);
     state.distance = state.distance_range.end;
+    state.mode = CameraMode::Steer;
 }
 
-fn create_initial_tracks(
-    datafile: &DataFile,
-    commands: &mut Commands
+pub fn handle_game_events(
+    mut events: EventReader<GameEvent>,
+    mut loading_state: ResMut<LoadingState>,
+    asset_server: Res<AssetServer>,
+    mut datafile_assets: ResMut<Assets<DataFile>>,
+    mut next_screen: ResMut<NextState<Screen>>,
 ) {
-    /* Create existing tracks */
-    for (name, TrackToLoad {points }) in datafile.tracks.iter() {
-        let parent_id = commands
-            .spawn((
-                Name::new(format!("Track:{name}")),
-                Visibility::default(),
-                Transform::default()
-            )).id();
+    let Some(event) = events.read().next()
+    else { return; };
 
-        let point_ids = points.iter()
-            .map(|pt| commands.spawn((
-                Point,
-                Transform::from_translation(*pt),
-                ChildOf(parent_id)
-            )).id())
-            .collect::<Vec<_>>();
-
-        let segment_ids: Vec<_> = point_ids.windows(2).map(|w| {
-            let [pt1, pt2, ..] = w else { panic!("Expect window of size 2") };
-            commands.spawn((
-                Segment {
-                    from_point: *pt1,
-                    to_point: *pt2,
-                    length: 0.0,
-                },
-                ChildOf(parent_id)
-            )).id()
-        }).collect();
-        info!("created track with {} segments", segment_ids.len());
-
-        /* Put a train at the start of the first segment */
-        let first_segment_id = segment_ids[0];
-
-        commands.spawn((
-            Name::new("Train"),
-            TrainCar {
-                segment_id: first_segment_id,
-                segment_position: 0.0,
-                speed: 0.001,
-                acceleration: 1.0,
-                max_speed: 100_000.0 / 3600.0,
-                length: 12.0,
-            },
-        ));
-        info!("created train");
+    match event {
+        GameEvent::LoadLevel(level_path) => {
+            loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
+            loading_state.datafile_handle = asset_server.load::<DataFile>(level_path);
+            next_screen.set(Screen::Loading);
+        },
+        GameEvent::LoadLevelData(datafile) => {
+            loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
+            let handle = datafile_assets.reserve_handle();
+            datafile_assets.insert(handle.id(), datafile.clone());
+            loading_state.datafile_handle = handle;
+            next_screen.set(Screen::Loading);
+        },
+        GameEvent::LoadingComplete => {
+            info!("Loading complete");
+            next_screen.set(Screen::Playing);
+        }
     }
 }

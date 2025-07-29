@@ -7,6 +7,7 @@ pub mod camera;
 pub mod debug;
 pub mod events;
 pub mod level;
+pub mod screens;
 pub mod sky;
 pub mod terrain;
 pub mod tools;
@@ -35,7 +36,9 @@ impl Plugin for RrengPlugin {
             .add_plugins(train::TrainPlugin)
             .add_plugins(worker::WorkerPlugin)
             .add_plugins(debug::DebugPlugin)
+            .add_plugins(screens::ScreensPlugin)
             .add_systems(Update, utils::fix_apparent_size)
+            .add_event::<events::GameEvent>()
             .add_event::<events::GraphicsEvent>();
 
         /* Outside web mode, quit on ESC being pressed */

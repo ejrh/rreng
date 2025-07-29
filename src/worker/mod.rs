@@ -56,7 +56,7 @@ impl Plugin for WorkerPlugin {
 
 pub fn create_workers(
     terrain: &Terrain,
-    mut commands: Commands,
+    commands: &mut Commands,
     num_workers: usize,
 ) {
     /* Delete existing workers */

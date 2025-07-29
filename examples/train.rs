@@ -1,30 +1,23 @@
 use bevy::app::{App, Startup};
-use bevy::asset::{Assets, Handle};
-use bevy::ecs::system::ResMut;
+use bevy::prelude::Commands;
 
+use rreng::events::GameEvent;
 use rreng::RrengPlugin;
-use rreng::level::datafile::DataFile;
-use rreng::level::loading::LoadingState;
 
 fn main() {
     let mut app = App::new();
 
     app.add_plugins(RrengPlugin);
-    app.add_systems(Startup, setup);
+    app.add_systems(Startup, load_initial_level);
 
     app.run();
 }
 
-fn setup(
-    mut loading_state: ResMut<LoadingState>,
-    mut datafile_assets: ResMut<Assets<DataFile>>,
-) {
+fn load_initial_level(mut commands: Commands) {
     let datafile = ron::from_str(LEVEL_FILE).unwrap();
-    datafile_assets.insert(LEVEL_FILE_HANDLE.id(), datafile);
-    loading_state.datafile_handle = LEVEL_FILE_HANDLE;
-}
 
-pub const LEVEL_FILE_HANDLE: Handle<DataFile> = Handle::weak_from_u128(19781219_1);
+    commands.send_event(GameEvent::LoadLevelData(datafile));
+}
 
 const LEVEL_FILE: &str = r#"
 DataFile(

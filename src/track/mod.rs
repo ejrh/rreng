@@ -1,4 +1,6 @@
-use bevy::prelude::{App, IntoScheduleConfigs, Plugin, PostUpdate, Startup, Update};
+use bevy::log::info;
+use bevy::math::Vec3;
+use bevy::prelude::{App, ChildOf, Commands, Entity, IntoScheduleConfigs, Name, Plugin, PostUpdate, Startup, Transform, Update, Visibility};
 
 use crate::track::point::Point;
 use crate::track::segment::{Segment, SegmentLinkage};
@@ -32,4 +34,45 @@ impl Plugin for TrackPlugin {
             ).chain())
             .add_systems(PostUpdate, rendering::update_track_meshes);
     }
+}
+
+pub fn create_track(
+    name: &str,
+    points: &[Vec3],
+    looped: bool,
+    commands: &mut Commands
+) -> (Entity, Vec<Entity>, Vec<Entity>) {
+    let parent_id = commands
+        .spawn((
+            Name::new(format!("Track:{name}")),
+            Visibility::default(),
+            Transform::default(),
+        )).id();
+
+    let mut point_ids = points.iter()
+        .map(|pt| commands.spawn((
+            Point,
+            Transform::from_translation(*pt),
+            ChildOf(parent_id)
+        )).id())
+        .collect::<Vec<_>>();
+
+    if looped {
+        point_ids.push(point_ids[0]);
+    }
+
+    let segment_ids: Vec<_> = point_ids.windows(2).map(|w| {
+        let [pt1, pt2, ..] = w else { panic!("Expect window of size 2") };
+        commands.spawn((
+            Segment {
+                from_point: *pt1,
+                to_point: *pt2,
+                length: 0.0,
+            },
+            ChildOf(parent_id)
+        )).id()
+    }).collect();
+    info!("created track with {} segments", segment_ids.len());
+
+    (parent_id, point_ids, segment_ids)
 }

@@ -1,6 +1,5 @@
 use std::ops::Range;
 
-use bevy::color::palettes::basic::{GRAY, YELLOW};
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::prelude::*;
 
@@ -12,59 +11,6 @@ pub fn show_fps(diagnostics: Res<DiagnosticsStore>, mut window: Single<&mut Wind
         else { return; };
 
     window.title = format!("FPS: {}", value);
-}
-
-pub fn show_version(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    const VERSION: &str = env!("CARGO_PKG_VERSION");
-    const EXTRA: Option<&str> = option_env!("RRENG_VERSION_EXTRA");
-    let extra = EXTRA.unwrap_or_default();
-    let version_str = format!("RRENG version {VERSION}{extra}");
-
-    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
-
-    commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            bottom: Val::Px(10.0),
-            right: Val::Px(10.0),
-            ..default()
-        },
-        Text(version_str.to_owned()),
-        TextFont {
-            font: font.clone(),
-            font_size: 20.0,
-            ..default()
-        },
-        TextColor(Color::Srgba(YELLOW)),
-    ));
-}
-
-pub fn show_help_text(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
-    let font = asset_server.load("fonts/FiraMono-Medium.ttf");
-
-    const HELP_STR: &str = "Controls: WASD move, QE rotate, ZX zoom, PgUp/Dn pitch";
-
-    commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            bottom: Val::Px(40.0),
-            right: Val::Px(10.0),
-            ..default()
-        },
-        Text(HELP_STR.to_owned()),
-        TextFont {
-            font: font.clone(),
-            font_size: 16.0,
-            ..default()
-        },
-        TextColor(Color::Srgba(GRAY)),
-    ));
 }
 
 pub fn close_on_esc(
