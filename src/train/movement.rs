@@ -83,7 +83,8 @@ pub fn update_train_position(
         let anchor_dir: f32;
 
         if car.segment_position < p1 {
-            let Ok((_, _, prev_seg_transform)) = segments.get(linkage.prev_segment.unwrap().0)
+            let Some((_, _, prev_seg_transform)) = linkage.prev_segment
+                .and_then(|(prev, _)| segments.get(prev).ok())
             else { continue; };
 
             next_seg = *prev_seg_transform;
@@ -92,7 +93,8 @@ pub fn update_train_position(
             mix = 1.0 - car.segment_position / p1;
             anchor_dir = -1.0;
         } else {
-            let Ok((_, _, next_seg_transform)) = segments.get(linkage.next_segment.unwrap())
+            let Some((_, _, next_seg_transform)) = linkage.next_segment
+                .and_then(|next| segments.get(next).ok())
             else { continue; };
 
             next_seg = *next_seg_transform;
