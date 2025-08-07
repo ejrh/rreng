@@ -9,6 +9,7 @@ pub mod events;
 pub mod level;
 pub mod screens;
 pub mod sky;
+pub mod speed;
 pub mod terrain;
 pub mod tools;
 pub mod track;
@@ -29,6 +30,7 @@ impl Plugin for RrengPlugin {
                     .set(AssetPlugin { meta_check: AssetMetaCheck::Never, ..default() })
                     .set(window_plugin)
             ).add_plugins(camera::CameraPlugin)
+            .add_plugins(speed::GameSpeedPlugin)
             .add_plugins(sky::SkyPlugin)
             .add_plugins(level::LevelPlugin)
             .add_plugins(terrain::TerrainPlugin)

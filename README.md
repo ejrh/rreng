@@ -21,8 +21,9 @@ Editing:
 
 Other:
 
-    F5  - Toggle debug mode
-    ESC - Exit (except in web mode)
+    Space - Pause/unpause
+    F5    - Toggle debug mode
+    ESC   - Exit (except in web mode)
 
 Compilation
 -----------

@@ -70,7 +70,7 @@ fn create_camera(mut commands: Commands) {
     info!("create camera");
 }
 
-fn camera_movement(time: Res<Time>,
+fn camera_movement(time: Res<Time<Real>>,
                    keyboard_input: Res<ButtonInput<KeyCode>>,
                    mut camera: Single<(&mut CameraState, &Transform)>
 ) {
