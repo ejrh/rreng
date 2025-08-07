@@ -1,12 +1,13 @@
-use bevy::app::{App, Plugin, Startup};
+use bevy::app::{App, Plugin, Startup, Update};
 use bevy::asset::{AssetServer, Handle};
 use bevy::color::Color;
 use bevy::color::palettes::basic::{GRAY, YELLOW};
 use bevy::color::palettes::css::{GREY, SILVER};
 use bevy::ecs::children;
+use bevy::input::common_conditions::input_just_pressed;
 use bevy::log::info;
 use bevy::math::Vec3;
-use bevy::prelude::{AppExtStates, Commands, Font, Name, Node, OnEnter, Res, ResMut, Resource, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, Val};
+use bevy::prelude::{in_state, AppExtStates, Commands, Condition, Font, IntoScheduleConfigs, KeyCode, Name, Node, OnEnter, Res, ResMut, Resource, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Time, Val};
 use bevy::state::state::States;
 use bevy::ui::{AlignItems, AlignSelf, BorderColor, BorderRadius, Display, FlexDirection, JustifySelf, UiRect};
 use bevy::utils::default;
@@ -15,6 +16,7 @@ use crate::camera::{CameraMode, CameraState};
 use crate::track::create_track;
 use crate::train::create_train;
 use crate::{camera, level, tools};
+use crate::events::GameEvent;
 use crate::tools::Tools;
 
 pub(crate) struct ScreensPlugin;
@@ -29,7 +31,13 @@ impl Plugin for ScreensPlugin {
         app.add_systems(OnEnter(Screen::Title), setup_title);
         app.add_systems(OnEnter(Screen::Loading), setup_loading);
         app.add_systems(OnEnter(Screen::Playing), setup_playing);
+
+        app.add_systems(Update, load_level.run_if(in_state(Screen::Title).and(input_just_pressed(KeyCode::KeyJ))));
     }
+}
+
+fn load_level(mut commands: Commands) {
+    commands.send_event(GameEvent::LoadLevel("data/jvl.ron".to_owned()));
 }
 
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, States)]
@@ -89,7 +97,31 @@ pub fn setup_title(
                 Text(version_str.to_owned()),
                 TextFont::from_font(theme.font.clone()).with_font_size(20.0),
                 TextColor(Color::Srgba(SILVER)),
-            )
+            ),
+            Node {
+                height: Val::Percent(100.0),
+                ..default()
+            },
+            (
+                Text::default(),
+                TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                TextColor(Color::Srgba(GREY)),
+                children![
+                    (TextSpan("Press ".into()),
+                     TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                     TextColor(Color::Srgba(GREY))),
+                    (TextSpan("J".into()),
+                     TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                     TextColor(Color::Srgba(YELLOW))),
+                    (TextSpan(" to load the level".into()),
+                     TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                     TextColor(Color::Srgba(GREY)))
+                ],
+            ),
+            Node {
+                height: Val::Percent(5.0),
+                ..default()
+            },
         ]
     ));
 
