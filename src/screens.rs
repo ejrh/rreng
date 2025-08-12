@@ -1,3 +1,5 @@
+use std::f32::consts::{PI, TAU};
+
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::asset::{AssetServer, Handle};
 use bevy::color::Color;
@@ -11,6 +13,7 @@ use bevy::prelude::{in_state, AppExtStates, Commands, Condition, Font, IntoSched
 use bevy::state::state::States;
 use bevy::ui::{AlignItems, AlignSelf, BorderColor, BorderRadius, Display, FlexDirection, JustifySelf, UiRect};
 use bevy::utils::default;
+use rand::{thread_rng, Rng, seq::SliceRandom};
 
 use crate::camera::{CameraMode, CameraState};
 use crate::track::create_track;
@@ -126,22 +129,60 @@ pub fn setup_title(
     ));
 
     /* Create some loop tracks with trains on them */
-    for (rad, spd) in [(100.0, 1.0), (90.0, -1.0)] {
+    fn make_circle(radius: f32, height: f32, segments: usize) -> Vec<Vec3> {
         let mut points = vec![];
-        for i in 0..72 {
-            points.push(Vec3::new(rad * (i as f32 * 5.0).to_radians().sin(), 0.0, rad * (i as f32 * 5.0).to_radians().cos()));
+        let segment_angle = 360.0 / segments as f32;
+        for i in 0..segments {
+            let angle = (i as f32 * segment_angle).to_radians();
+            let x = radius * angle.cos();
+            let y = height;
+            let z = radius * angle.sin();
+            points.push(Vec3::new(x, y, z));
         }
-        let (track_id, _, segment_ids) = create_track("Title", &points, true, &mut commands);
+        points
+    }
 
-        /* Put a train at the start of the first and opposite segment */
-        let first_segment_id = segment_ids[0];
-        let train1_id = create_train("Title", first_segment_id, 0.0, spd, &mut commands);
-        let opposite_segment_id = segment_ids[36];
-        let train2_id = create_train("Title", opposite_segment_id, 0.0, spd, &mut commands);
+    fn make_figure_8(radius: f32, height: f32, segments: usize, minus_segments: usize) -> Vec<Vec3> {
+        let remaining_segments = segments - minus_segments;
 
-        commands.entity(track_id).insert(StateScoped(Screen::Title));
-        commands.entity(train1_id).insert(StateScoped(Screen::Title));
-        commands.entity(train2_id).insert(StateScoped(Screen::Title));
+        let circle = make_circle(radius, 0.0, segments);
+        let circle: Vec<_> = circle.iter()
+            .skip(minus_segments / 2).take(remaining_segments + 1)
+            .collect();
+
+        let angle = TAU / segments as f32 * (minus_segments - 1) as f32 / 2.0;
+        let last_pt = circle[0];
+        let offset = last_pt.x + last_pt.z * angle.tan();
+
+        let curve = circle.iter().enumerate()
+            .map(|(i, pt)| *pt + Vec3::new(-offset, (1.0 - (i as f32 / remaining_segments as f32 * PI).cos()) / 2.0 * height, 0.0));
+        let curve2 = curve.clone().rev()
+            .map(|pt| pt * Vec3::new(-1.0, 1.0, -1.0));
+        let points = curve.chain(curve2).collect();
+        points
+    }
+
+    let layouts = [
+        vec![
+            (make_circle(100.0,00.0, 72), 2, 1.0),
+            (make_circle(90.0,5.0, 68), 2, -1.0),
+        ],
+        vec![
+            (make_figure_8(60.0, 10.0, 52, 6), 1, -1.0),
+        ],
+    ];
+    if let Some(parts) = layouts.choose(&mut thread_rng()) {
+        for (points, trains, spd) in parts {
+            let (track_id, _, segment_ids) = create_track("Title", &points, true, &mut commands);
+
+            commands.entity(track_id).insert(StateScoped(Screen::Title));
+
+            for i in 0..*trains {
+                let segment_id = segment_ids[i * (segment_ids.len() / *trains)];
+                let train_id = create_train("Title", segment_id, 0.0, *spd, &mut commands);
+                commands.entity(train_id).insert(StateScoped(Screen::Title));
+            }
+        }
     }
 
     /* Fix camera to be fixed on tracks */
