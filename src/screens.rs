@@ -16,6 +16,7 @@ use bevy::utils::default;
 use rand::{thread_rng, Rng, seq::SliceRandom};
 
 use crate::camera::{CameraMode, CameraState};
+use crate::track::bridge::Bridge;
 use crate::track::create_track;
 use crate::train::create_train;
 use crate::{camera, level, tools};
@@ -164,16 +165,23 @@ pub fn setup_title(
 
     let layouts = [
         vec![
-            (make_circle(100.0,00.0, 72), 2, 1.0),
-            (make_circle(90.0,5.0, 68), 2, -1.0),
+            (make_circle(100.0,0.0, 72), 2, 1.0, false),
+            (make_circle(90.0,5.0, 68), 2, -1.0, false),
         ],
         vec![
-            (make_figure_8(60.0, 10.0, 52, 6), 1, -1.0),
+            (make_figure_8(60.0, 10.0, 52, 6), 1, -1.0, true),
         ],
     ];
     if let Some(parts) = layouts.choose(&mut thread_rng()) {
-        for (points, trains, spd) in parts {
+        for (points, trains, spd, bridge) in parts {
             let (track_id, _, segment_ids) = create_track("Title", &points, true, &mut commands);
+
+            if *bridge {
+                let bridge_id = segment_ids[segment_ids.len() / 2 - 1];
+                commands.entity(bridge_id).insert(
+                    Bridge { pillars: 4 },
+                );
+            }
 
             commands.entity(track_id).insert(StateScoped(Screen::Title));
 

@@ -5,6 +5,7 @@ use bevy::prelude::{App, ChildOf, Commands, Entity, IntoScheduleConfigs, Name, P
 use crate::track::point::Point;
 use crate::track::segment::{Segment, SegmentLinkage};
 
+pub mod bridge;
 pub mod point;
 pub mod rendering;
 pub mod segment;
@@ -33,6 +34,8 @@ impl Plugin for TrackPlugin {
                 segment::update_segment_linkage
             ).chain())
             .add_systems(PostUpdate, rendering::update_track_meshes);
+
+        app.add_plugins(bridge::BridgePlugin);
     }
 }
 
@@ -68,6 +71,7 @@ pub fn create_track(
                 from_point: *pt1,
                 to_point: *pt2,
                 length: 0.0,
+                rendered_id: None,
             },
             ChildOf(parent_id)
         )).id()

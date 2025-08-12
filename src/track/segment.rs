@@ -11,6 +11,7 @@ pub struct Segment {
     pub from_point: Entity,
     pub to_point: Entity,
     pub length: f32,
+    pub rendered_id: Option<Entity>,
 }
 
 #[derive(Component, Default, Reflect)]

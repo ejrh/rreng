@@ -77,14 +77,25 @@ pub fn init_render_params(
 }
 
 pub fn update_track_meshes(
-    segments: Query<(Entity, &Segment, &SegmentLinkage, &Transform), Or<(Changed<Segment>, Changed<SegmentLinkage>, Changed<Transform>)>>,
+    mut segments: Query<(Entity, &mut Segment, &SegmentLinkage, &Transform), Or<(Changed<Segment>, Changed<SegmentLinkage>, Changed<Transform>)>>,
     points: Query<&Transform, With<Point>>,
     params: Res<TrackRenderParams>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
 ) {
-    for (segment_id, segment, linkage, segment_transform) in segments.iter() {
-        commands.entity(segment_id).despawn_related::<Children>();
+    for (segment_id, mut segment, linkage, segment_transform) in segments.iter_mut() {
+
+        if let Some(rendered_id) = segment.rendered_id {
+            commands.entity(rendered_id).despawn_related::<Children>();
+        } else {
+            segment.rendered_id = Some(commands.spawn((
+                Name::new("Track"),
+                Transform::default(),
+                Visibility::default(),
+                ChildOf(segment_id),
+            )).id());
+        }
+        let parent_id = segment.rendered_id.unwrap();
 
         let open_start = linkage.prev_segment.is_some();
         let open_end = linkage.next_segment.is_some();
@@ -103,7 +114,7 @@ pub fn update_track_meshes(
         commands.spawn((
             Mesh3d(meshes.add(rail_mesh)),
             MeshMaterial3d(params.rail_material.clone()),
-            ChildOf(segment_id)
+            ChildOf(parent_id)
         ));
 
         let num_sleepers = f32::round(segment.length / params.sleeper_spacing) as usize;
@@ -114,7 +125,7 @@ pub fn update_track_meshes(
                 Mesh3d(params.sleeper_mesh.clone()),
                 MeshMaterial3d(params.sleeper_material.clone()),
                 sleeper_transform,
-                ChildOf(segment_id)
+                ChildOf(parent_id)
             ));
         }
 
@@ -122,7 +133,7 @@ pub fn update_track_meshes(
         commands.spawn((
             Mesh3d(meshes.add(bed_mesh)),
             MeshMaterial3d(params.bed_material.clone()),
-            ChildOf(segment_id)
+            ChildOf(parent_id)
         ));
     }
 }
