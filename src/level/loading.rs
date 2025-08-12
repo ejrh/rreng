@@ -103,11 +103,13 @@ pub fn check_loading_state(
         loading_state.elevation_handles.extend(new_elevation_handles);
     }
 
-    let parent_id = commands.spawn((
-        Name::new("Level"),
-        Transform::default(),
-        Visibility::default(),
-    )).id();
+    let parent_id = render_params.level_id.get_or_insert_with(
+        || commands.spawn((
+            Name::new("Level"),
+            Transform::default(),
+            Visibility::default(),
+        )).id()
+    );
 
     if !loading_state.created_tracks {
         /* Create existing tracks */
@@ -118,16 +120,14 @@ pub fn check_loading_state(
             let first_segment_id = segment_ids[0];
             let train_id = create_train(name, first_segment_id, 0.0, 0.01, &mut commands);
 
-            commands.entity(track_id).insert(ChildOf(parent_id));
-            commands.entity(train_id).insert(ChildOf(parent_id));
+            commands.entity(track_id).insert(ChildOf(*parent_id));
+            commands.entity(train_id).insert(ChildOf(*parent_id));
         }
 
         loading_state.created_tracks = true;
     }
 
     crate::worker::create_workers(&terrain, &mut commands, 1);
-
-    render_params.level_id = Some(parent_id);
 
     commands.send_event(GameEvent::LoadingComplete);
 }
