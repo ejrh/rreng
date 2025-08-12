@@ -1,7 +1,8 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
-use bevy_inspector_egui::bevy_egui::EguiPlugin;
+use bevy::window::PrimaryWindow;
+use bevy_egui::{EguiContext, EguiContextPass, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::level::selection::SelectedPoint;
@@ -26,14 +27,39 @@ impl DebugState {
     }
 }
 
+#[derive(Default, Reflect, Resource)]
+#[reflect(Resource)]
+struct DebugOptions {
+    world_inspector: bool,
+    debug_terrain: bool,
+    debug_workers: bool,
+    show_points: bool,
+    show_lights: bool,
+    log_click: bool,
+}
+
+#[macro_export]
+macro_rules! debug_option {
+    ($name: ident) => (in_state(DebugState::On).and(|options: Res<DebugOptions>| options.$name));
+}
+
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app
-            .init_state::<DebugState>()
+            .register_type::<DebugOptions>()
             .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
-            .add_plugins(WorldInspectorPlugin::new().run_if(in_state(DebugState::On)))
-            .add_systems(Update, (debug_terrain, log_click, show_points, show_lights).run_if(in_state(DebugState::On)))
-            .add_systems(Update, (toggle_debug, point_visibility));
+            .init_state::<DebugState>()
+            .init_resource::<DebugOptions>()
+            .add_systems(Update, toggle_debug)
+            .add_systems(EguiContextPass, debug_options_ui.run_if(in_state(DebugState::On)));
+
+        app
+            .add_plugins(WorldInspectorPlugin::new().run_if(debug_option!(world_inspector)))
+            .add_systems(Update, debug_terrain.run_if(debug_option!(debug_terrain)))
+            .add_systems(Update, crate::worker::debug::debug_workers.run_if(debug_option!(debug_workers)))
+            .add_systems(Update, show_points.run_if(debug_option!(show_points)))
+            .add_systems(Update, show_lights.run_if(debug_option!(show_lights)))
+            .add_systems(Update, log_click.run_if(debug_option!(log_click)));
     }
 }
 
@@ -45,6 +71,31 @@ fn toggle_debug(
     if keys.just_pressed(KeyCode::F5) {
         next_state.set(current_state.inverse());
     }
+}
+
+fn debug_options_ui(
+    mut egui_context: Single<&mut EguiContext, With<PrimaryWindow>>,
+    mut options: ResMut<DebugOptions>,
+) {
+    const DEFAULT_POS: (f32, f32) = (800., 100.);
+    const DEFAULT_SIZE: (f32, f32) = (240., 160.);
+
+    egui::Window::new("Debug Options")
+        .default_pos(DEFAULT_POS)
+        .default_size(DEFAULT_SIZE)
+        .show(egui_context.get_mut(), |ui| {
+            egui::ScrollArea::both().show(ui, |ui| {
+                ui.checkbox(&mut options.world_inspector, "World Inspector");
+                ui.heading("Gizmos");
+                ui.checkbox(&mut options.debug_terrain, "Debug Terrain");
+                ui.checkbox(&mut options.debug_workers, "Debug Workers");
+                ui.checkbox(&mut options.show_points, "Show Points");
+                ui.checkbox(&mut options.show_lights, "Show Lights");
+                ui.heading("Logging");
+                ui.checkbox(&mut options.log_click, "Clicks");
+                ui.allocate_space(ui.available_size());
+            });
+        });
 }
 
 fn debug_terrain(
@@ -71,34 +122,6 @@ fn debug_terrain(
     }
 }
 
-pub fn log_click(
-    buttons: Res<ButtonInput<MouseButton>>,
-    selected_point: Res<SelectedPoint>,
-) {
-    let left = buttons.just_pressed(MouseButton::Left);
-    let right = buttons.just_pressed(MouseButton::Right);
-
-    if left || right {
-        info!("Clicked on {:?} ({}, {})", selected_point.point, left, right);
-    }
-}
-
-fn point_visibility(
-    current_state: Res<State<DebugState>>,
-    mut point_visibility: Query<&mut Visibility, With<Point>>
-) {
-    let vis = match current_state.get() {
-        DebugState::On => Visibility::Inherited,
-        DebugState::Off => Visibility::Hidden,
-    };
-
-    for mut pv in point_visibility.iter_mut() {
-        if vis != *pv {
-            *pv = vis;
-        }
-    }
-}
-
 fn show_points(
     points: Query<&Transform, With<Point>>,
     mut gizmos: Gizmos,
@@ -122,5 +145,17 @@ fn show_lights(
         let from_point = transform.translation();
         let to_point = transform.transform_point(Vec3::new(0.0, 0.0, -2.0));
         gizmos.arrow(from_point, to_point, Color::srgb(1.0, 1.0, 0.0));
+    }
+}
+
+pub fn log_click(
+    buttons: Res<ButtonInput<MouseButton>>,
+    selected_point: Res<SelectedPoint>,
+) {
+    let left = buttons.just_pressed(MouseButton::Left);
+    let right = buttons.just_pressed(MouseButton::Right);
+
+    if left || right {
+        info!("Clicked on {:?} ({}, {})", selected_point.point, left, right);
     }
 }

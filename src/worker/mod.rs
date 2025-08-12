@@ -49,8 +49,7 @@ impl Plugin for WorkerPlugin {
 
         app
             .init_gizmo_group::<debug::WorkerDebug>()
-            .add_systems(Startup, debug::setup_debug)
-            .add_systems(PostUpdate, debug::debug_workers);
+            .add_systems(Startup, debug::setup_debug);
     }
 }
 
