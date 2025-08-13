@@ -9,7 +9,7 @@ use bevy::ecs::children;
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::log::info;
 use bevy::math::Vec3;
-use bevy::prelude::{in_state, AppExtStates, Commands, Condition, Font, IntoScheduleConfigs, KeyCode, Name, Node, OnEnter, Res, ResMut, Resource, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Time, Val};
+use bevy::prelude::{in_state, AppExtStates, Commands, Condition, Font, IntoScheduleConfigs, KeyCode, Name, NextState, Node, OnEnter, Res, ResMut, Resource, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Time, Val};
 use bevy::state::state::States;
 use bevy::ui::{AlignItems, AlignSelf, BorderColor, BorderRadius, Display, FlexDirection, JustifySelf, UiRect};
 use bevy::utils::default;
@@ -19,7 +19,7 @@ use crate::camera::{CameraMode, CameraState};
 use crate::track::bridge::Bridge;
 use crate::track::create_track;
 use crate::train::create_train;
-use crate::{camera, level, tools};
+use crate::{camera, level, screens, tools, utils};
 use crate::events::GameEvent;
 use crate::tools::Tools;
 
@@ -37,11 +37,21 @@ impl Plugin for ScreensPlugin {
         app.add_systems(OnEnter(Screen::Playing), setup_playing);
 
         app.add_systems(Update, load_level.run_if(in_state(Screen::Title).and(input_just_pressed(KeyCode::KeyJ))));
+
+        /* Outside web mode, quit on ESC being pressed in the title screen*/
+        #[cfg(not(target_arch = "wasm32"))]
+        app.add_systems(Update, utils::close_on_esc.run_if(in_state(screens::Screen::Title)));
+
+        app.add_systems(Update, exit_level.run_if(in_state(Screen::Playing).and(input_just_pressed(KeyCode::Escape))));
     }
 }
 
 fn load_level(mut commands: Commands) {
     commands.send_event(GameEvent::LoadLevel("data/jvl.ron".to_owned()));
+}
+
+fn exit_level(mut commands: Commands) {
+    commands.send_event(GameEvent::ExitLevel);
 }
 
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, States)]

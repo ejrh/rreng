@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, PluginGroup, Update};
 use bevy::asset::{AssetMetaCheck, AssetPlugin};
 use bevy::DefaultPlugins;
-use bevy::prelude::{default, WindowPlugin};
+use bevy::prelude::{default, in_state, IntoScheduleConfigs, WindowPlugin};
 
 pub mod camera;
 pub mod debug;
@@ -42,10 +42,6 @@ impl Plugin for RrengPlugin {
             .add_systems(Update, utils::fix_apparent_size)
             .add_event::<events::GameEvent>()
             .add_event::<events::GraphicsEvent>();
-
-        /* Outside web mode, quit on ESC being pressed */
-        #[cfg(not(target_arch = "wasm32"))]
-        app.add_systems(Update, utils::close_on_esc);
     }
 }
 

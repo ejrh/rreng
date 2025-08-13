@@ -1,6 +1,6 @@
 use bevy::asset::AssetServer;
 use bevy::prelude::*;
-
+use crate::screens::Screen;
 use crate::terrain;
 use crate::ui::toolbar;
 use crate::ui::toolbar::{Toolbar, ToolbarButton, ToolbarLine, ToolbarPlugin};
@@ -62,6 +62,7 @@ pub(crate) fn create_tools(
     let button_font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
     let toolbar_id= toolbar::create(&mut commands).id();
+    commands.entity(toolbar_id).insert(StateScoped(Screen::Playing));
 
     let toolbar_line_id = toolbar::create_line(&mut commands, toolbar_id).id();
 

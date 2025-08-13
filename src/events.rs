@@ -5,6 +5,7 @@ pub enum GameEvent {
     LoadLevel(String),
     LoadLevelData(crate::level::datafile::DataFile),
     LoadingComplete,
+    ExitLevel,
 }
 
 #[derive(Debug, Event)]

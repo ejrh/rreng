@@ -108,6 +108,7 @@ pub fn check_loading_state(
             Name::new("Level"),
             Transform::default(),
             Visibility::default(),
+            StateScoped(Screen::Playing),
         )).id()
     );
 
@@ -200,6 +201,10 @@ pub fn handle_game_events(
         GameEvent::LoadingComplete => {
             info!("Loading complete");
             next_screen.set(Screen::Playing);
+        }
+        GameEvent::ExitLevel => {
+            info!("Exiting level");
+            next_screen.set(Screen::Title);
         }
     }
 }

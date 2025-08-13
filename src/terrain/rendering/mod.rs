@@ -142,7 +142,7 @@ pub fn update_meshes(
         let Some(parent_id) = params.parent_id.get(layer).copied()
         else { continue; };
 
-        let tree = mesh_trees.get(parent_id).unwrap();
+        let Ok(tree) = mesh_trees.get(parent_id) else { continue; };
 
         let (layer_height_adjust, layer_material) = match layer {
             TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
@@ -268,7 +268,7 @@ pub fn handle_mesh_tasks(
             let block_id = mt.terrain_mesh.block_id;
             let layer = mt.terrain_mesh.layer;
             let parent_id = params.parent_id[&layer];
-            let mut tree = mesh_trees.get_mut(parent_id).unwrap();
+            let Ok(mut tree) = mesh_trees.get_mut(parent_id) else { continue; };
 
             let id = commands.spawn((
                 mt.terrain_mesh,
