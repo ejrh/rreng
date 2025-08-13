@@ -56,7 +56,7 @@ pub enum Screen {
 
 #[derive(Default, Resource)]
 pub struct Theme {
-    font: Handle<Font>,
+    pub font: Handle<Font>,
 }
 
 pub fn setup_theme(
