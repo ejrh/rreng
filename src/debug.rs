@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_egui::{EguiContext, EguiContextPass, EguiPlugin};
+use bevy_egui::{EguiContext, EguiContextPass, EguiGlobalSettings, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::level::selection::SelectedPoint;
@@ -50,6 +50,7 @@ impl Plugin for DebugPlugin {
             .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
             .init_state::<DebugState>()
             .init_resource::<DebugOptions>()
+            .add_systems(Startup, setup_debug)
             .add_systems(Update, toggle_debug)
             .add_systems(EguiContextPass, debug_options_ui.run_if(in_state(DebugState::On)));
 
@@ -61,6 +62,12 @@ impl Plugin for DebugPlugin {
             .add_systems(Update, show_lights.run_if(debug_option!(show_lights)))
             .add_systems(Update, log_click.run_if(debug_option!(log_click)));
     }
+}
+
+fn setup_debug(
+    mut egui_global_settings: ResMut<EguiGlobalSettings>,
+) {
+    egui_global_settings.enable_absorb_bevy_input_system = true;
 }
 
 fn toggle_debug(
