@@ -22,6 +22,7 @@ Editing:
 Other:
 
     Space - Pause/unpause
+    1-6   - Set game speed
     F5    - Toggle debug mode
     ESC   - Exit (except in web mode)
 
