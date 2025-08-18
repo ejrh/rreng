@@ -37,8 +37,6 @@ pub struct TerrainPlugin;
 impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app
-            .init_resource::<Terrain>()
-            .init_resource::<TerrainData>()
             .init_asset::<tiles::TileSets>()
             .init_asset_loader::<tiles::TileSetsLoader>()
             .init_asset::<tiles::ElevationFile>()
@@ -60,7 +58,7 @@ pub struct BlockInfo {
     pub dirty: bool,
 }
 
-#[derive(Default, Debug, Resource)]
+#[derive(Component, Default, Debug)]
 pub struct Terrain {
     pub bounds: Rect,
     pub size: [usize; 2],
@@ -70,7 +68,7 @@ pub struct Terrain {
     pub point_dims: [usize; 2],
 }
 
-#[derive(Default, Debug, Resource)]
+#[derive(Component, Default, Debug)]
 pub struct TerrainData {
     pub layers: HashMap<TerrainLayer, Arc<RwLock<ndarray::Array2<f32>>>>,
     pub block_info: ndarray::Array2<BlockInfo>,

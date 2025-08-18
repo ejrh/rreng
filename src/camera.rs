@@ -8,6 +8,8 @@ use bevy::{
 };
 
 use crate::events::GraphicsEvent;
+use crate::level::LevelLabel;
+use crate::screens::Screen;
 use crate::terrain::TerrainData;
 
 pub struct CameraPlugin;
@@ -144,7 +146,7 @@ fn camera_movement(time: Res<Time<Real>>,
 
 fn update_camera_position(
     mut camera: Single<(&CameraState, &mut Transform), Changed<CameraState>>,
-    terrain_data: Res<TerrainData>,
+    terrain_data: Option<Single<&TerrainData, With<LevelLabel>>>,
     mut events: EventWriter<GraphicsEvent>,
 ) {
     let (state, transform) = &mut *camera;
@@ -153,7 +155,7 @@ fn update_camera_position(
         * Quat::from_axis_angle(Vec3::X, state.pitch);
     let up_to_camera = transform.rotation.mul_vec3(Vec3::Z);
     let mut focus = state.focus;
-    focus.y = terrain_data.elevation_at(focus.xz());
+    focus.y = terrain_data.map_or(0.0, |td| td.elevation_at(focus.xz()));
     transform.translation = focus + state.distance * up_to_camera;
 
     events.write(GraphicsEvent::MoveCamera);
@@ -179,7 +181,8 @@ pub(crate) fn create_camera_position_text(
             ..default()
         },
         TextColor(Color::Srgba(GRAY)),
-        CameraPositionLabel
+        CameraPositionLabel,
+        StateScoped(Screen::Playing),
     ));
 }
 

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy_egui::{EguiContext, EguiContextPass, EguiGlobalSettings, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-
+use crate::level::LevelLabel;
 use crate::level::selection::SelectedPoint;
 use crate::terrain::Terrain;
 use crate::track::point::Point;
@@ -106,7 +106,7 @@ fn debug_options_ui(
 }
 
 fn debug_terrain(
-    terrain: Res<Terrain>,
+    terrain: Single<&Terrain, With<LevelLabel>>,
     mut gizmos: Gizmos,
 ) {
     let pos = Vec3::new(0.5 * terrain.size[1] as f32,0.0,  0.5 * terrain.size[0] as f32);

@@ -54,6 +54,7 @@ impl Plugin for WorkerPlugin {
 }
 
 pub fn create_workers(
+    parent_id: Entity,
     terrain: &Terrain,
     commands: &mut Commands,
     num_workers: usize,
@@ -71,7 +72,8 @@ pub fn create_workers(
         .spawn((
             Name::new("Workers"),
             Visibility::default(),
-            Transform::default()
+            Transform::default(),
+            ChildOf(parent_id),
         )).id();
 
     for _ in 0..num_workers {

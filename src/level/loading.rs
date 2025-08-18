@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 use std::f32::consts::TAU;
+
 use bevy::prelude::*;
 
 use crate::camera::{CameraMode, CameraState};
-use crate::events::GameEvent;
+use crate::events::{DataEvent, GameEvent};
 use crate::level::datafile::{DataFile, TrackToLoad};
+use crate::level::LevelLabel;
 use crate::screens::Screen;
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
-use crate::terrain::rendering::TerrainRenderParams;
+use crate::terrain::rendering::water::WaterLabel;
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
 use crate::track::create_track;
 use crate::train::create_train;
@@ -54,12 +56,11 @@ pub fn datafile_loaded(
 
 pub fn check_loading_state(
     mut loading_state: ResMut<LoadingState>,
-    mut terrain: ResMut<Terrain>,
-    mut terrain_data: ResMut<TerrainData>,
+    mut level: Single<(Entity, &mut Terrain, &mut TerrainData), With<LevelLabel>>,
     datafile_assets: Res<Assets<DataFile>>,
     tilesets_assets: Res<Assets<TileSets>>,
+    elevation_assets: Res<Assets<ElevationFile>>,
     asset_server: Res<AssetServer>,
-    mut render_params: ResMut<TerrainRenderParams>,
     mut commands: Commands,
 ) {
     let Some(tilesets) = tilesets_assets.get(&loading_state.tilesets_handle)
@@ -71,8 +72,9 @@ pub fn check_loading_state(
     /* Reset the terrain parameters */
     info!("Level bounds are: {:?}", datafile.bounds);
 
+    let (level_id, terrain, terrain_data) = &mut *level;
     terrain.reset(datafile);
-    terrain_data.reset(&terrain, datafile);
+    terrain_data.reset(terrain, datafile);
 
     /* Process the data file and load the chunk elevations */
     let tilesets_path = asset_server.get_path(&loading_state.tilesets_handle).unwrap();
@@ -99,18 +101,14 @@ pub fn check_loading_state(
         }
     }
 
+    /* Retrigger already-loaded elevation data */
+    for (id, _) in elevation_assets.iter() {
+        commands.send_event(DataEvent::LoadedElevation(id));
+    }
+
     if !new_elevation_handles.is_empty() {
         loading_state.elevation_handles.extend(new_elevation_handles);
     }
-
-    let parent_id = render_params.level_id.get_or_insert_with(
-        || commands.spawn((
-            Name::new("Level"),
-            Transform::default(),
-            Visibility::default(),
-            StateScoped(Screen::Playing),
-        )).id()
-    );
 
     if !loading_state.created_tracks {
         /* Create existing tracks */
@@ -121,44 +119,55 @@ pub fn check_loading_state(
             let first_segment_id = segment_ids[0];
             let train_id = create_train(name, first_segment_id, 0.0, 0.01, &mut commands);
 
-            commands.entity(track_id).insert(ChildOf(*parent_id));
-            commands.entity(train_id).insert(ChildOf(*parent_id));
+            commands.entity(track_id).insert(ChildOf(*level_id));
+            commands.entity(train_id).insert(ChildOf(*level_id));
         }
 
         loading_state.created_tracks = true;
     }
 
-    crate::worker::create_workers(&terrain, &mut commands, 1);
+    crate::worker::create_workers(*level_id, terrain, &mut commands, 1);
 
     commands.send_event(GameEvent::LoadingComplete);
 }
 
 pub fn elevation_loaded(
-    loading_state: ResMut<LoadingState>,
-    terrain: Res<Terrain>,
-    mut terrain_data: ResMut<TerrainData>,
     mut events: EventReader<AssetEvent<ElevationFile>>,
-    assets: Res<Assets<ElevationFile>>,
-    asset_server: Res<AssetServer>,
+    mut commands: Commands,
 ) {
     for evt in events.read() {
         if let AssetEvent::Added { id } = evt {
-            info!("elevation loaded: {:?}", asset_server.get_path(*id));
+            commands.send_event(DataEvent::LoadedElevation(*id));
+        }
+    }
+}
 
-            let elevation_file = assets.get(*id).unwrap();
+pub fn process_loaded_elevation(
+    mut events: EventReader<DataEvent>,
+    assets: Res<Assets<ElevationFile>>,
+    loading_state: ResMut<LoadingState>,
+    mut level: Single<(&Terrain, &mut TerrainData), With<LevelLabel>>,
+) {
+    let (terrain, terrain_data) = &mut *level;
 
-            let Some((tile, layer)) = loading_state.get_tile(*id)
-            else { continue; };
+    for evt in events.read() {
+        match evt {
+            DataEvent::LoadedElevation(asset_id) => {
+                let elevation_file = assets.get(*asset_id).unwrap();
 
-            let tile_corner = Vec2::new(tile.bounds.min.x, tile.bounds.max.y);
-            let offset = terrain.coord_to_offset(tile_corner);
-            terrain_data.set_elevation(offset, elevation_file.heights.view(), *layer);
+                if let Some((tile, layer)) = loading_state.get_tile(*asset_id) {
+                    let tile_corner = Vec2::new(tile.bounds.min.x, tile.bounds.max.y);
+                    let offset = terrain.coord_to_offset(tile_corner);
+                    terrain_data.set_elevation(offset, elevation_file.heights.view(), *layer);
+                }
+            },
+            _ => (),
         }
     }
 }
 
 pub fn set_camera_range(
-    terrain: Res<Terrain>,
+    terrain: Single<Ref<Terrain>, With<LevelLabel>>,
     mut state: Single<&mut CameraState>,
 ) {
     if !terrain.is_changed() { return; }
@@ -175,36 +184,68 @@ pub fn set_camera_range(
     state.mode = CameraMode::Steer;
 }
 
+fn create_level(commands: &mut Commands) {
+    commands.spawn((
+        LevelLabel,
+        Name::new("Level"),
+        Transform::default(),
+        Visibility::Hidden,
+        Terrain::default(),
+        TerrainData::default(),
+        children![
+            (
+                WaterLabel,
+                Name::new("Water"),
+                Visibility::default(),
+                Transform::default(),
+            ),
+        ],
+    ));
+}
+
 pub fn handle_game_events(
     mut events: EventReader<GameEvent>,
     mut loading_state: ResMut<LoadingState>,
     asset_server: Res<AssetServer>,
     mut datafile_assets: ResMut<Assets<DataFile>>,
     mut next_screen: ResMut<NextState<Screen>>,
+    mut commands: Commands,
+    level: Option<Single<Entity, With<LevelLabel>>>,
 ) {
-    let Some(event) = events.read().next()
-    else { return; };
+    let level_id = level.map(|s| *s);
 
-    match event {
-        GameEvent::LoadLevel(level_path) => {
-            loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
-            loading_state.datafile_handle = asset_server.load::<DataFile>(level_path);
-            next_screen.set(Screen::Loading);
-        },
-        GameEvent::LoadLevelData(datafile) => {
-            loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
-            let handle = datafile_assets.reserve_handle();
-            datafile_assets.insert(handle.id(), datafile.clone());
-            loading_state.datafile_handle = handle;
-            next_screen.set(Screen::Loading);
-        },
-        GameEvent::LoadingComplete => {
-            info!("Loading complete");
-            next_screen.set(Screen::Playing);
-        }
-        GameEvent::ExitLevel => {
-            info!("Exiting level");
-            next_screen.set(Screen::Title);
+    for event in events.read() {
+        info!("Handling: {:?}", event);
+
+        match event {
+            GameEvent::LoadLevel(level_path) => {
+                *loading_state = LoadingState::default();
+                loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
+                loading_state.datafile_handle = asset_server.load::<DataFile>(level_path);
+                create_level(&mut commands);
+                next_screen.set(Screen::Loading);
+            },
+            GameEvent::LoadLevelData(datafile) => {
+                *loading_state = LoadingState::default();
+                loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
+                let handle = datafile_assets.reserve_handle();
+                datafile_assets.insert(handle.id(), datafile.clone());
+                loading_state.datafile_handle = handle;
+                create_level(&mut commands);
+                next_screen.set(Screen::Loading);
+            },
+            GameEvent::LoadingComplete => {
+                if let Some(level_id) = level_id {
+                    commands.entity(level_id).insert((
+                        Visibility::Inherited,
+                        StateScoped(Screen::Playing)
+                    ));
+                }
+                next_screen.set(Screen::Playing);
+            }
+            GameEvent::ExitLevel => {
+                next_screen.set(Screen::Title);
+            }
         }
     }
 }

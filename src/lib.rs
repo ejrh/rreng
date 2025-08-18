@@ -40,6 +40,7 @@ impl Plugin for RrengPlugin {
             .add_plugins(debug::DebugPlugin)
             .add_plugins(screens::ScreensPlugin)
             .add_systems(Update, utils::fix_apparent_size)
+            .add_event::<events::DataEvent>()
             .add_event::<events::GameEvent>()
             .add_event::<events::GraphicsEvent>();
     }

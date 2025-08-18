@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use bevy::{
@@ -14,6 +13,7 @@ use bevy::tasks::futures_lite::future;
 use ndarray::{s, Array2};
 
 use crate::events::GraphicsEvent;
+use crate::level::LevelLabel;
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
@@ -31,9 +31,9 @@ impl Plugin for TerrainRenderingPlugin {
             .register_type::<TerrainMesh>()
             .add_systems(Startup, init_render_params)
             .init_resource::<MeshTaskQueue>()
-            .add_systems(Update, water::update_water.run_if(resource_changed::<Terrain>))
+            .add_systems(Update, water::update_water)
             .add_systems(Update, (
-                update_parents,
+                update_layer_parents,
                 update_meshes,
                 handle_mesh_tasks,
                 select_meshes,
@@ -52,11 +52,8 @@ const MAX_MESH_TREE_LEVEL: usize = 4;
 
 #[derive(Resource)]
 pub struct TerrainRenderParams {
-    pub(crate) level_id: Option<Entity>,
-    parent_id: HashMap<TerrainLayer, Entity>,
     dirt_material: Handle<StandardMaterial>,
     grass_material: Handle<StandardMaterial>,
-    water_id: Option<Entity>,
     water_material: Handle<StandardMaterial>,
 }
 
@@ -84,48 +81,49 @@ pub fn init_render_params(
     water_material.perceptual_roughness = 0.75;
     water_material.reflectance = 0.25;
     let params = TerrainRenderParams {
-        level_id: None,
-        parent_id: HashMap::new(),
         dirt_material: materials.add(dirt_material),
         grass_material: materials.add(grass_material),
-        water_id: None,
         water_material: materials.add(water_material),
     };
     commands.insert_resource(params);
 }
 
-pub fn update_parents(
-    terrain: Res<Terrain>,
-    terrain_data: Res<TerrainData>,
-    mut params: ResMut<TerrainRenderParams>,
+#[derive(Component)]
+pub struct LayerLabel(pub TerrainLayer);
+
+pub fn update_layer_parents(
+    level: Single<(Entity, Mut<Terrain>, &TerrainData), With<LevelLabel>>,
+    layers: Query<&LayerLabel>,
     mut commands: Commands,
 ) {
-    let Some(level_id) = params.level_id
-    else { return; };
+    let (level_id, terrain, terrain_data) = &*level;
+
+    if !terrain.is_changed() { return; }
 
     for layer in terrain_data.layers.keys() {
-        params.parent_id.entry(*layer).or_insert_with(|| {
-            let tree = MeshTree::new(terrain.num_blocks, MAX_MESH_TREE_LEVEL);
-            info!("Mesh tree with {} levels", tree.levels.len());
+        if layers.iter().any(|l| l.0 == *layer) { continue; }
 
-            commands.spawn((
-                Name::new(format!("Terrain:{:?}", layer)),
-                Visibility::default(),
-                Transform::default(),
-                tree,
-                ChildOf(level_id),
-            )).id()
-        });
+        let tree = MeshTree::new(terrain.num_blocks, MAX_MESH_TREE_LEVEL);
+        info!("Mesh tree with {} levels", tree.levels.len());
+        commands.spawn((
+            LayerLabel(*layer),
+            Name::new(format!("Terrain:{:?}", layer)),
+            Visibility::default(),
+            Transform::default(),
+            tree,
+            ChildOf(*level_id),
+        ));
     }
 }
 
 pub fn update_meshes(
-    terrain: Res<Terrain>,
-    mut terrain_data: ResMut<TerrainData>,
+    mut level: Single<(&Terrain, &mut TerrainData), With<LevelLabel>>,
     params: Res<TerrainRenderParams>,
-    mesh_trees: Query<&MeshTree>,
+    mesh_trees: Query<(&LayerLabel, &MeshTree)>,
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
 ) {
+    let (terrain, terrain_data) = &mut *level;
+
     /* Collect affected blocks */
     let blocks: Vec<_> = terrain_data.block_info.indexed_iter()
         .filter_map(|((i, j), bi)| if bi.dirty { Some((i, j))} else { None })
@@ -139,10 +137,8 @@ pub fn update_meshes(
     /* Process each layer */
     for (layer, elevation) in &terrain_data.layers {
         /* Get the parent, mesh tree, and various render settings for this layer */
-        let Some(parent_id) = params.parent_id.get(layer).copied()
+        let Some(tree) = mesh_trees.iter().find_map(|(l, t)| if l.0 == *layer { Some(t) } else { None })
         else { continue; };
-
-        let Ok(tree) = mesh_trees.get(parent_id) else { continue; };
 
         let (layer_height_adjust, layer_material) = match layer {
             TerrainLayer::Elevation => (0.0, params.dirt_material.clone()),
@@ -247,8 +243,7 @@ fn queue_mesh_task(
 pub fn handle_mesh_tasks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
-    params: Res<TerrainRenderParams>,
-    mut mesh_trees: Query<&mut MeshTree>,
+    mut mesh_trees: Query<(Entity, &LayerLabel, &mut MeshTree)>,
     mut commands: Commands,
     mut events: EventWriter<GraphicsEvent>,
 ) {
@@ -267,8 +262,9 @@ pub fn handle_mesh_tasks(
 
             let block_id = mt.terrain_mesh.block_id;
             let layer = mt.terrain_mesh.layer;
-            let parent_id = params.parent_id[&layer];
-            let Ok(mut tree) = mesh_trees.get_mut(parent_id) else { continue; };
+
+            let Some((parent_id, _, mut tree)) = mesh_trees.iter_mut().find(|(_, l, _)| l.0 == layer)
+            else { continue; };
 
             let id = commands.spawn((
                 mt.terrain_mesh,
@@ -297,7 +293,7 @@ pub fn handle_mesh_tasks(
 }
 
 pub fn select_meshes(
-    terrain: Res<Terrain>,
+    terrain: Single<&Terrain, With<LevelLabel>>,
     camera: Single<&GlobalTransform, With<Camera>>,
     mesh_trees: Query<&mut MeshTree>,
     mut meshes: Query<(&GlobalTransform, &Aabb, &mut Visibility), Without<Camera>>,

@@ -2,18 +2,19 @@ use std::time::Duration;
 
 use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
-use bevy::prelude::{Query, Res, Time, Transform};
+use bevy::prelude::{Query, Res, Single, Time, Transform, With};
 use rand::Rng;
-
+use crate::level::LevelLabel;
 use crate::terrain::{Terrain, TerrainData};
 use crate::worker::{Behaviour, Worker};
 
 pub fn update_workers(
     time: Res<Time>,
-    terrain: Res<Terrain>,
+    level: Single<(&Terrain, &TerrainData), With<LevelLabel>>,
     mut workers: Query<(&mut Worker, &mut Behaviour, &Transform)>,
-    terrain_data: Res<TerrainData>,
 ) {
+    let (terrain, terrain_data) = *level;
+    
     for (mut w, mut b, wt) in workers.iter_mut() {
         match *b {
             Behaviour::Idle => {

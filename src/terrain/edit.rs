@@ -3,9 +3,10 @@ use std::ops::DerefMut;
 
 use bevy::input::ButtonInput;
 use bevy::log::info_span;
-use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, ResMut};
+use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, Single, With};
 use ndarray::{Array2, Ix, Ixs};
 
+use crate::level::LevelLabel;
 use crate::level::selection::SelectedPoint;
 use crate::terrain::{TerrainData, TerrainLayer};
 use crate::terrain::utils::Range2;
@@ -13,7 +14,7 @@ use crate::terrain::utils::Range2;
 pub fn click_point(
     buttons: Res<ButtonInput<MouseButton>>,
     selected_point: Res<SelectedPoint>,
-    mut terrain_data: ResMut<TerrainData>,
+    mut terrain_data: Single<&mut TerrainData, With<LevelLabel>>,
 ) {
     let elevation = &terrain_data.layers[&TerrainLayer::Elevation];
     let mut _guard = elevation.write().unwrap();
@@ -46,7 +47,7 @@ pub fn click_point(
 pub fn drag_point(
     buttons: Res<ButtonInput<MouseButton>>,
     selected_point: Res<SelectedPoint>,
-    mut terrain_data: ResMut<TerrainData>,
+    mut terrain_data: Single<&mut TerrainData, With<LevelLabel>>,
     mut start_point: Local<SelectedPoint>,
     mut gizmos: Gizmos,
 ) {

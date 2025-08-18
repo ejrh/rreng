@@ -4,7 +4,7 @@ use bevy::picking::backend::prelude::RayMap;
 use bevy::picking::backend::ray::RayId;
 use bevy::picking::pointer::PointerId;
 use bevy::prelude::*;
-
+use crate::screens::Screen;
 use crate::terrain::rendering::TerrainMesh;
 use crate::terrain::TerrainLayer;
 use crate::utils::ConstantApparentSize;
@@ -109,6 +109,7 @@ pub fn create_cursor_position_text(
             ..default()
         },
         TextColor(Color::Srgba(GRAY)),
-        CursorPositionLabel
+        CursorPositionLabel,
+        StateScoped(Screen::Playing),
     ));
 }

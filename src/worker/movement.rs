@@ -1,15 +1,16 @@
 use bevy::math::{Vec3, Vec3Swizzles};
-use bevy::prelude::{Query, Res, Time, Transform};
-
+use bevy::prelude::{Query, Res, Single, Time, Transform, With};
+use crate::level::LevelLabel;
 use crate::terrain::{Terrain, TerrainData};
 use crate::worker::Worker;
 
 pub fn move_workers(
     time: Res<Time>,
-    terrain: Res<Terrain>,
-    terrain_data: Res<TerrainData>,
+    level: Single<(&Terrain, &TerrainData), With<LevelLabel>>,
     mut workers: Query<(&mut Worker, &mut Transform)>,
 ) {
+    let (terrain, terrain_data) = *level;
+
     for (mut w, mut wt) in workers.iter_mut() {
         wt.translation += w.velocity * time.delta_secs();
         wt.translation = wt.translation.clamp(Vec3::ZERO, Vec3::new(terrain.size[0] as f32, 0.0, terrain.size[1] as f32));

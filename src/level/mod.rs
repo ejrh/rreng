@@ -1,4 +1,4 @@
-use bevy::prelude::OnEnter;
+use bevy::prelude::{Component, OnEnter};
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::asset::AssetApp;
 use bevy::prelude::{on_event, resource_changed, IntoScheduleConfigs};
@@ -22,6 +22,7 @@ impl Plugin for LevelPlugin {
             .add_systems(Update, loading::tilesets_loaded)
             .add_systems(Update, loading::elevation_loaded)
             .add_systems(Update, loading::datafile_loaded)
+            .add_systems(Update, loading::process_loaded_elevation)
             .add_systems(Update, loading::check_loading_state.run_if(resource_changed::<loading::LoadingState>))
             .add_systems(OnEnter(Screen::Playing), set_camera_range)
             .init_resource::<selection::SelectedPoint>()
@@ -33,3 +34,6 @@ impl Plugin for LevelPlugin {
             .add_systems(Update, selection::update_cursor_position);
     }
 }
+
+#[derive(Component)]
+pub struct LevelLabel;
