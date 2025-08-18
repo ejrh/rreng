@@ -2,8 +2,9 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use bevy_egui::{EguiContext, EguiContextPass, EguiGlobalSettings, EguiPlugin};
+use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
 use crate::level::LevelLabel;
 use crate::level::selection::SelectedPoint;
 use crate::terrain::Terrain;
@@ -47,12 +48,12 @@ impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app
             .register_type::<DebugOptions>()
-            .add_plugins(EguiPlugin { enable_multipass_for_primary_context: true })
+            .add_plugins(EguiPlugin::default())
             .init_state::<DebugState>()
             .init_resource::<DebugOptions>()
             .add_systems(Startup, setup_debug)
             .add_systems(Update, toggle_debug)
-            .add_systems(EguiContextPass, debug_options_ui.run_if(in_state(DebugState::On)));
+            .add_systems(EguiPrimaryContextPass, debug_options_ui.run_if(in_state(DebugState::On)));
 
         app
             .add_plugins(WorldInspectorPlugin::new().run_if(debug_option!(world_inspector)))
@@ -81,16 +82,16 @@ fn toggle_debug(
 }
 
 fn debug_options_ui(
-    mut egui_context: Single<&mut EguiContext, With<PrimaryWindow>>,
+    mut egui_contexts: EguiContexts,
     mut options: ResMut<DebugOptions>,
-) {
+) -> Result {
     const DEFAULT_POS: (f32, f32) = (800., 100.);
     const DEFAULT_SIZE: (f32, f32) = (240., 160.);
 
     egui::Window::new("Debug Options")
         .default_pos(DEFAULT_POS)
         .default_size(DEFAULT_SIZE)
-        .show(egui_context.get_mut(), |ui| {
+        .show(egui_contexts.ctx_mut()?, |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
                 ui.checkbox(&mut options.world_inspector, "World Inspector");
                 ui.heading("Gizmos");
@@ -103,6 +104,7 @@ fn debug_options_ui(
                 ui.allocate_space(ui.available_size());
             });
         });
+    Ok(())
 }
 
 fn debug_terrain(
