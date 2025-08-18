@@ -17,6 +17,7 @@ pub mod train;
 pub mod ui;
 pub mod utils;
 pub mod worker;
+mod theme;
 
 pub struct RrengPlugin;
 
@@ -29,7 +30,9 @@ impl Plugin for RrengPlugin {
                 DefaultPlugins
                     .set(AssetPlugin { meta_check: AssetMetaCheck::Never, ..default() })
                     .set(window_plugin)
-            ).add_plugins(camera::CameraPlugin)
+            )
+            .add_plugins(theme::ThemePlugin)
+            .add_plugins(camera::CameraPlugin)
             .add_plugins(speed::GameSpeedPlugin)
             .add_plugins(sky::SkyPlugin)
             .add_plugins(level::LevelPlugin)

@@ -1,7 +1,6 @@
 use std::f32::consts::{PI, TAU};
 
-use bevy::app::{App, Plugin, Startup, Update};
-use bevy::asset::{AssetServer, Handle};
+use bevy::app::{App, Plugin, Update};
 use bevy::color::Color;
 use bevy::color::palettes::basic::{GRAY, YELLOW};
 use bevy::color::palettes::css::{GREY, SILVER};
@@ -9,7 +8,7 @@ use bevy::ecs::children;
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::log::info;
 use bevy::math::Vec3;
-use bevy::prelude::{in_state, AppExtStates, Commands, Condition, Font, IntoScheduleConfigs, KeyCode, Name, NextState, Node, OnEnter, Res, ResMut, Resource, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Time, Val};
+use bevy::prelude::{in_state, AppExtStates, Commands, Condition, IntoScheduleConfigs, KeyCode, Name, Node, OnEnter, Res, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Val};
 use bevy::state::state::States;
 use bevy::ui::{AlignItems, AlignSelf, BorderColor, BorderRadius, Display, FlexDirection, JustifySelf, UiRect};
 use bevy::utils::default;
@@ -21,16 +20,14 @@ use crate::track::create_track;
 use crate::train::create_train;
 use crate::{camera, level, screens, tools, utils};
 use crate::events::GameEvent;
+use crate::theme::Theme;
 use crate::tools::Tools;
 
 pub(crate) struct ScreensPlugin;
 
 impl Plugin for ScreensPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_state::<Screen>()
-            .init_resource::<Theme>()
-            .add_systems(Startup, setup_theme);
+        app.init_state::<Screen>();
 
         app.add_systems(OnEnter(Screen::Title), setup_title);
         app.add_systems(OnEnter(Screen::Loading), setup_loading);
@@ -62,18 +59,6 @@ pub enum Screen {
     Title,
     Loading,
     Playing
-}
-
-#[derive(Default, Resource)]
-pub struct Theme {
-    pub font: Handle<Font>,
-}
-
-pub fn setup_theme(
-    mut theme: ResMut<Theme>,
-    asset_server: Res<AssetServer>,
-) {
-    theme.font = asset_server.load("fonts/FiraMono-Medium.ttf");
 }
 
 pub fn setup_title(
@@ -169,8 +154,8 @@ pub fn setup_title(
             .map(|(i, pt)| *pt + Vec3::new(-offset, (1.0 - (i as f32 / remaining_segments as f32 * PI).cos()) / 2.0 * height, 0.0));
         let curve2 = curve.clone().rev()
             .map(|pt| pt * Vec3::new(-1.0, 1.0, -1.0));
-        let points = curve.chain(curve2).collect();
-        points
+
+        curve.chain(curve2).collect()
     }
 
     let layouts = [
@@ -184,7 +169,7 @@ pub fn setup_title(
     ];
     if let Some(parts) = layouts.choose(&mut thread_rng()) {
         for (points, trains, spd, bridge) in parts {
-            let (track_id, _, segment_ids) = create_track("Title", &points, true, &mut commands);
+            let (track_id, _, segment_ids) = create_track("Title", points, true, &mut commands);
 
             if *bridge {
                 let bridge_id = segment_ids[segment_ids.len() / 2 - 1];

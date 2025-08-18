@@ -1,16 +1,13 @@
-
 use bevy::prelude::{resource_changed, Condition, Query, Single, SpawnRelated, With, Without};
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::color::Color;
-use bevy::color::palettes::basic::YELLOW;
 use bevy::ecs::children;
-use bevy::ecs::schedule::And;
 use bevy::input::ButtonInput;
 use bevy::input::common_conditions::input_just_pressed;
-use bevy::prelude::{default, AlignItems, AlignSelf, BorderColor, BorderRadius, Commands, Component, FlexDirection, IntoScheduleConfigs, JustifySelf, KeyCode, Name, Node, ReflectResource, Res, ResMut, StateScoped, Text, TextColor, TextFont, Time, UiRect, Val, Virtual};
+use bevy::prelude::{default, AlignItems, AlignSelf, Commands, Component, FlexDirection, IntoScheduleConfigs, JustifySelf, KeyCode, Name, Node, ReflectResource, Res, ResMut, StateScoped, Text, TextColor, TextFont, Time, UiRect, Val, Virtual};
 use bevy::prelude::{Reflect, Resource};
-use bevy::ui::AlignContent;
-use crate::screens::{Screen, Theme};
+
+use crate::theme::Theme;
 
 #[derive(Component)]
 pub struct GameSpeedPlugin;
