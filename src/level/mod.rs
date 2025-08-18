@@ -1,4 +1,4 @@
-use bevy::prelude::{Component, OnEnter};
+use bevy::prelude::{in_state, Component, OnEnter};
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::asset::AssetApp;
 use bevy::prelude::{on_event, resource_changed, IntoScheduleConfigs};
@@ -23,7 +23,7 @@ impl Plugin for LevelPlugin {
             .add_systems(Update, loading::elevation_loaded)
             .add_systems(Update, loading::datafile_loaded)
             .add_systems(Update, loading::process_loaded_elevation)
-            .add_systems(Update, loading::check_loading_state.run_if(resource_changed::<loading::LoadingState>))
+            .add_systems(Update, loading::check_loading_state.run_if(in_state(Screen::Loading)))
             .add_systems(OnEnter(Screen::Playing), set_camera_range)
             .init_resource::<selection::SelectedPoint>()
             .add_systems(Update, loading::handle_game_events.run_if(on_event::<GameEvent>));
