@@ -2,15 +2,15 @@ use std::f32::consts::{PI, TAU};
 
 use bevy::app::{App, Plugin, Update};
 use bevy::color::Color;
-use bevy::color::palettes::basic::{GRAY, YELLOW};
+use bevy::color::palettes::basic::{GRAY, WHITE, YELLOW};
 use bevy::color::palettes::css::{GREY, SILVER};
 use bevy::ecs::children;
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::log::info;
 use bevy::math::Vec3;
-use bevy::prelude::{in_state, AppExtStates, Commands, Condition, IntoScheduleConfigs, KeyCode, Name, Node, OnEnter, Res, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Val};
+use bevy::prelude::{in_state, AppExtStates, ChildOf, Commands, Condition, IntoScheduleConfigs, KeyCode, Name, Node, OnEnter, RepeatedGridTrack, Res, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Val};
 use bevy::state::state::States;
-use bevy::ui::{AlignItems, AlignSelf, BorderColor, BorderRadius, Display, FlexDirection, JustifySelf, UiRect};
+use bevy::ui::{AlignItems, AlignSelf, BorderColor, BorderRadius, Display, FlexDirection, JustifyItems, JustifySelf, UiRect};
 use bevy::utils::default;
 use rand::{thread_rng, Rng, seq::SliceRandom};
 
@@ -20,6 +20,7 @@ use crate::track::create_track;
 use crate::train::create_train;
 use crate::{camera, level, screens, tools, utils};
 use crate::events::GameEvent;
+use crate::level::loading::{LoadingStage, LoadingStageLabel};
 use crate::theme::Theme;
 use crate::tools::Tools;
 
@@ -201,18 +202,69 @@ pub fn setup_loading(
     theme: Res<Theme>,
     mut commands: Commands,
 ) {
-    commands.spawn((
+    let parent_id = commands.spawn((
         Name::new("Screen:Loading"),
         Node {
+            flex_direction: FlexDirection::Column,
             align_self: AlignSelf::Center,
             justify_self: JustifySelf::Center,
+            justify_items: JustifyItems::Stretch,
+            align_items: AlignItems::Stretch,
             ..default()
         },
-        Text("Loading...".to_owned()),
-        TextFont::from_font(theme.font.clone()).with_font_size(40.0),
-        TextColor(Color::Srgba(GREY)),
         StateScoped(Screen::Loading),
-    ));
+        children![(
+            Node {
+                align_self: AlignSelf::Center,
+                margin: UiRect::all(Val::Px(10.0)),
+                ..default()
+            },
+            Text("Loading...".to_owned()),
+            TextFont::from_font(theme.font.clone()).with_font_size(40.0),
+            TextColor(Color::Srgba(GREY)),
+        )]
+    )).id();
+
+    let group_id = commands.spawn((
+        Node {
+            display: Display::Grid,
+            align_self: AlignSelf::Center,
+            grid_template_columns: vec![RepeatedGridTrack::auto(2)],
+            row_gap: Val::Px(10.0),
+            column_gap: Val::Px(20.0),
+            ..default()
+        },
+        ChildOf(parent_id),
+    )).id();
+
+    for (text, label) in [
+        ("Loading data files", LoadingStage::LoadingData),
+        ("Loading map data", LoadingStage::LoadingTerrain),
+        ("Reticulating splines", LoadingStage::ReticulatingSplines),
+        ("Creating objects", LoadingStage::CreatingObjects),
+    ] {
+        commands.spawn((
+            Text(text.to_owned()),
+            TextFont {
+                font: theme.font.clone(),
+                font_size: 20.0,
+                ..default()
+            },
+            TextColor(Color::Srgba(GRAY)),
+            ChildOf(group_id),
+        ));
+        commands.spawn((
+            LoadingStageLabel(label),
+            Text("0%".to_owned()),
+            TextFont {
+                font: theme.font.clone(),
+                font_size: 20.0,
+                ..default()
+            },
+            TextColor(Color::Srgba(WHITE)),
+            ChildOf(group_id),
+        ));
+    }
 }
 
 pub fn setup_playing(

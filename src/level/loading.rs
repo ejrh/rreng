@@ -1,10 +1,8 @@
 use std::collections::HashMap;
-use std::f32::consts::TAU;
 
 use bevy::prelude::*;
 
-use crate::camera::{CameraMode, CameraState};
-use crate::events::{DataEvent, GameEvent};
+use crate::events::GameEvent;
 use crate::level::datafile::{DataFile, TrackToLoad};
 use crate::level::LevelLabel;
 use crate::screens::Screen;
@@ -14,184 +12,177 @@ use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
 use crate::track::create_track;
 use crate::train::create_train;
 
-#[derive(Debug, Default, Resource)]
+const TILESETS_ASSET_PATH: &str = "data/tiles.ron";
+
+pub struct LoadingPlugin;
+
+impl Plugin for LoadingPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(Update, check_loading_state.run_if(in_state(Screen::Loading)))
+            .add_systems(Update, update_loading_progress.run_if(in_state(Screen::Loading)));
+    }
+}
+
+#[derive(Copy, Clone, Debug, Reflect)]
+pub enum LoadingStage {
+    LoadingData,
+    LoadingTerrain,
+    ReticulatingSplines,
+    CreatingObjects,
+}
+
+#[derive(Component)]
+pub struct LoadingStageLabel(pub LoadingStage);
+
+#[derive(Component, Debug, Reflect)]
+#[reflect(Component)]
 pub struct LoadingState {
+    stage: LoadingStage,
+    datafile_handle: Handle<DataFile>,
     tilesets_handle: Handle<TileSets>,
-    pub datafile_handle: Handle<DataFile>,
     elevation_handles: HashMap<Handle<ElevationFile>, (Tile, TerrainLayer)>,
-    created_tracks: bool,
+    files_loaded: u32,
+    files_expected: u32,
+    tiles_loaded: u32,
+    tiles_expected: u32,
 }
 
 impl LoadingState {
-    fn get_tile(&self, asset_id: AssetId<ElevationFile>) -> Option<&(Tile, TerrainLayer)> {
-        self.elevation_handles.iter()
-            .find(|(h, _)| h.id() == asset_id)
-            .map(|(_, tile)| tile)
-    }
-}
-
-pub fn tilesets_loaded(
-    mut loading_state: ResMut<LoadingState>,
-    mut events: EventReader<AssetEvent<TileSets>>,
-) {
-    for evt in events.read() {
-        if let AssetEvent::LoadedWithDependencies { id } = evt {
-            info!("tilesets loaded: {id}");
-            loading_state.set_changed();
-        }
-    }
-}
-
-pub fn datafile_loaded(
-    mut loading_state: ResMut<LoadingState>,
-    mut events: EventReader<AssetEvent<DataFile>>,
-) {
-    for evt in events.read() {
-        if let AssetEvent::LoadedWithDependencies { id } = evt {
-            info!("datafile loaded: {id}");
-            loading_state.set_changed();
+    pub(crate) fn new(datafile_handle: Handle<DataFile>) -> Self {
+        LoadingState {
+            stage: LoadingStage::LoadingData,
+            datafile_handle,
+            tilesets_handle: default(),
+            elevation_handles: HashMap::new(),
+            files_loaded: 0,
+            files_expected: 2,
+            tiles_loaded: 0,
+            tiles_expected: 0,
         }
     }
 }
 
 pub fn check_loading_state(
-    mut loading_state: ResMut<LoadingState>,
-    mut level: Single<(Entity, &mut Terrain, &mut TerrainData), With<LevelLabel>>,
+    mut level: Single<(Entity, &mut Terrain, &mut TerrainData, &mut LoadingState), With<LevelLabel>>,
     datafile_assets: Res<Assets<DataFile>>,
     tilesets_assets: Res<Assets<TileSets>>,
     elevation_assets: Res<Assets<ElevationFile>>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
 ) {
-    let Some(tilesets) = tilesets_assets.get(&loading_state.tilesets_handle)
-    else { return };
+    let (level_id, terrain, terrain_data, loading_state) = &mut *level;
 
-    let Some(datafile) = datafile_assets.get(&loading_state.datafile_handle)
-    else { return };
+    match loading_state.stage {
+        LoadingStage::LoadingData => {
+            loading_state.files_loaded = 0;
+            let Some(datafile) = datafile_assets.get(&loading_state.datafile_handle)
+            else { return; };
+            loading_state.files_loaded += 1;
 
-    /* Reset the terrain parameters */
-    info!("Level bounds are: {:?}", datafile.bounds);
+            loading_state.tilesets_handle = asset_server.load(TILESETS_ASSET_PATH);
 
-    let (level_id, terrain, terrain_data) = &mut *level;
-    terrain.reset(datafile);
-    terrain_data.reset(terrain, datafile);
+            let Some(tilesets) = tilesets_assets.get(&loading_state.tilesets_handle)
+            else { return; };
+            loading_state.files_loaded += 1;
 
-    /* Process the data file and load the chunk elevations */
-    let tilesets_path = asset_server.get_path(&loading_state.tilesets_handle).unwrap();
+            info!("Level bounds are: {:?}", datafile.bounds);
+            terrain.reset(datafile);
+            terrain_data.reset(terrain, datafile);
 
-    let mut new_elevation_handles = HashMap::new();
+            let tilesets_path = asset_server.get_path(&loading_state.tilesets_handle).unwrap();
 
-    for tileset in tilesets.0.values() {
-        if !datafile.layers.contains(&tileset.layer) {
-            continue;
-        }
+            for tileset in tilesets.0.values() {
+                if !datafile.layers.contains(&tileset.layer) {
+                    continue;
+                }
 
-        let tileset_path = tilesets_path.parent().unwrap().resolve(&tileset.root).unwrap();
-        for (name, tile) in &tileset.files {
-            if terrain.bounds.intersect(tile.bounds).is_empty() {
-                continue;
+                let tileset_path = tilesets_path.parent().unwrap().resolve(&tileset.root).unwrap();
+                for (name, tile) in &tileset.files {
+                    if terrain.bounds.intersect(tile.bounds).is_empty() {
+                        continue;
+                    }
+
+                    let elevation_path = tileset_path.resolve(name).unwrap();
+                    let handle = asset_server.load::<ElevationFile>(elevation_path);
+
+                    loading_state.elevation_handles.insert(handle, ((*tile).clone(), tileset.layer));
+                    loading_state.tiles_expected += 1;
+                }
             }
 
-            let elevation_path = tileset_path.resolve(name).unwrap();
-            let handle = asset_server.load::<ElevationFile>(elevation_path);
-            if loading_state.elevation_handles.contains_key(&handle) {
-                continue;
-            }
-            new_elevation_handles.insert(handle, ((*tile).clone(), tileset.layer));
+            loading_state.stage = LoadingStage::LoadingTerrain;
         }
-    }
-
-    /* Retrigger already-loaded elevation data */
-    for (id, _) in elevation_assets.iter() {
-        commands.send_event(DataEvent::LoadedElevation(id));
-    }
-
-    if !new_elevation_handles.is_empty() {
-        loading_state.elevation_handles.extend(new_elevation_handles);
-    }
-
-    if !loading_state.created_tracks {
-        /* Create existing tracks */
-        for (name, TrackToLoad {points }) in datafile.tracks.iter() {
-            let (track_id, _, segment_ids) = create_track(name, points, false, &mut commands);
-
-            /* Put a train at the start of the first segment */
-            let first_segment_id = segment_ids[0];
-            let train_id = create_train(name, first_segment_id, 0.0, 0.01, &mut commands);
-
-            commands.entity(track_id).insert(ChildOf(*level_id));
-            commands.entity(train_id).insert(ChildOf(*level_id));
-        }
-
-        loading_state.created_tracks = true;
-    }
-
-    crate::worker::create_workers(*level_id, terrain, &mut commands, 1);
-
-    commands.send_event(GameEvent::LoadingComplete);
-}
-
-pub fn elevation_loaded(
-    mut events: EventReader<AssetEvent<ElevationFile>>,
-    mut commands: Commands,
-) {
-    for evt in events.read() {
-        if let AssetEvent::Added { id } = evt {
-            commands.send_event(DataEvent::LoadedElevation(*id));
-        }
-    }
-}
-
-pub fn process_loaded_elevation(
-    mut events: EventReader<DataEvent>,
-    assets: Res<Assets<ElevationFile>>,
-    loading_state: ResMut<LoadingState>,
-    mut level: Single<(&Terrain, &mut TerrainData), With<LevelLabel>>,
-) {
-    let (terrain, terrain_data) = &mut *level;
-
-    for evt in events.read() {
-        match evt {
-            DataEvent::LoadedElevation(asset_id) => {
-                let elevation_file = assets.get(*asset_id).unwrap();
-
-                if let Some((tile, layer)) = loading_state.get_tile(*asset_id) {
+        LoadingStage::LoadingTerrain => {
+            let elevation_handles = std::mem::take(&mut loading_state.elevation_handles);
+            for (handle, (tile, layer)) in elevation_handles {
+                if let Some(elevation_file) = elevation_assets.get(&handle) {
                     let tile_corner = Vec2::new(tile.bounds.min.x, tile.bounds.max.y);
                     let offset = terrain.coord_to_offset(tile_corner);
-                    terrain_data.set_elevation(offset, elevation_file.heights.view(), *layer);
+                    terrain_data.set_elevation(offset, elevation_file.heights.view(), layer);
+                    loading_state.tiles_loaded += 1;
+                } else {
+                    loading_state.elevation_handles.insert(handle, (tile, layer));
                 }
-            },
-            _ => (),
+            }
+
+            if loading_state.elevation_handles.is_empty() {
+                loading_state.stage = LoadingStage::ReticulatingSplines;
+            }
+        }
+        LoadingStage::ReticulatingSplines => {
+
+            loading_state.stage = LoadingStage::CreatingObjects;
+        }
+        LoadingStage::CreatingObjects => {
+            let Some(datafile) = datafile_assets.get(&loading_state.datafile_handle)
+            else { return; };
+
+            /* Create existing tracks */
+            for (name, TrackToLoad {points }) in datafile.tracks.iter() {
+                let (track_id, _, segment_ids) = create_track(name, points, false, &mut commands);
+
+                /* Put a train at the start of the first segment */
+                let first_segment_id = segment_ids[0];
+                let train_id = create_train(name, first_segment_id, 0.0, 0.01, &mut commands);
+
+                commands.entity(track_id).insert(ChildOf(*level_id));
+                commands.entity(train_id).insert(ChildOf(*level_id));
+            }
+
+            crate::worker::create_workers(*level_id, terrain, &mut commands, 1);
+
+            commands.send_event(GameEvent::LoadingComplete);
         }
     }
 }
 
-pub fn set_camera_range(
-    terrain: Single<Ref<Terrain>, With<LevelLabel>>,
-    mut state: Single<&mut CameraState>,
+pub fn update_loading_progress(
+    loading_state: Single<&LoadingState, With<LevelLabel>>,
+    texts: Query<(&LoadingStageLabel, &mut Text), Without<LevelLabel>>,
 ) {
-    if !terrain.is_changed() { return; }
-    let xrange = (terrain.num_blocks[1] * terrain.block_size) as f32;
-    let yrange = 1000.0;
-    let zrange = (terrain.num_blocks[0] * terrain.block_size) as f32;
+    for (label, mut text) in texts {
+        let (done, expected) = match label.0 {
+            LoadingStage::LoadingData => (loading_state.files_loaded, loading_state.files_expected),
+            LoadingStage::LoadingTerrain => (loading_state.tiles_loaded, loading_state.tiles_expected),
+            LoadingStage::ReticulatingSplines => (0, 0),
+            LoadingStage::CreatingObjects => (0, 0),
+        };
 
-    state.focus_range = Vec3::ZERO..Vec3::new(xrange, yrange, zrange);
-    state.focus = state.focus_range.start + state.focus_range.end / 2.0;
-    state.yaw_range = None;
-    state.pitch_range = -TAU/4.0..TAU/4.0;
-    state.distance_range = 1.0..xrange.max(zrange).max(1.0);
-    state.distance = state.distance_range.end;
-    state.mode = CameraMode::Steer;
+        let pct = if expected == 0 { 0 } else { done * 100 / expected };
+        text.0 = format!("{}%", pct);
+    }
 }
 
-fn create_level(commands: &mut Commands) {
-    commands.spawn((
+pub(crate) fn new_level(datafile_handle: Handle<DataFile>) -> impl Bundle {
+    (
         LevelLabel,
         Name::new("Level"),
         Transform::default(),
         Visibility::Hidden,
         Terrain::default(),
         TerrainData::default(),
+        LoadingState::new(datafile_handle),
         children![
             (
                 WaterLabel,
@@ -200,52 +191,5 @@ fn create_level(commands: &mut Commands) {
                 Transform::default(),
             ),
         ],
-    ));
-}
-
-pub fn handle_game_events(
-    mut events: EventReader<GameEvent>,
-    mut loading_state: ResMut<LoadingState>,
-    asset_server: Res<AssetServer>,
-    mut datafile_assets: ResMut<Assets<DataFile>>,
-    mut next_screen: ResMut<NextState<Screen>>,
-    mut commands: Commands,
-    level: Option<Single<Entity, With<LevelLabel>>>,
-) {
-    let level_id = level.map(|s| *s);
-
-    for event in events.read() {
-        info!("Handling: {:?}", event);
-
-        match event {
-            GameEvent::LoadLevel(level_path) => {
-                *loading_state = LoadingState::default();
-                loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
-                loading_state.datafile_handle = asset_server.load::<DataFile>(level_path);
-                create_level(&mut commands);
-                next_screen.set(Screen::Loading);
-            },
-            GameEvent::LoadLevelData(datafile) => {
-                *loading_state = LoadingState::default();
-                loading_state.tilesets_handle = asset_server.load::<TileSets>("data/tiles.ron");
-                let handle = datafile_assets.reserve_handle();
-                datafile_assets.insert(handle.id(), datafile.clone());
-                loading_state.datafile_handle = handle;
-                create_level(&mut commands);
-                next_screen.set(Screen::Loading);
-            },
-            GameEvent::LoadingComplete => {
-                if let Some(level_id) = level_id {
-                    commands.entity(level_id).insert((
-                        Visibility::Inherited,
-                        StateScoped(Screen::Playing)
-                    ));
-                }
-                next_screen.set(Screen::Playing);
-            }
-            GameEvent::ExitLevel => {
-                next_screen.set(Screen::Title);
-            }
-        }
-    }
+    )
 }

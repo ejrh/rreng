@@ -4,13 +4,14 @@ use std::io::Cursor;
 use bevy::asset::{Asset, AssetLoader, AsyncReadExt, LoadContext};
 use bevy::asset::io::Reader;
 use bevy::math::Rect;
-use bevy::prelude::TypePath;
+use bevy::prelude::{Reflect, TypePath};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tiff::decoder::DecodingResult;
+
 use crate::terrain::TerrainLayer;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Reflect, Deserialize, Serialize)]
 pub struct Tile {
     pub bounds: Rect,
 }

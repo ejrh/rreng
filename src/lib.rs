@@ -1,7 +1,7 @@
 use bevy::app::{App, Plugin, PluginGroup, Update};
 use bevy::asset::{AssetMetaCheck, AssetPlugin};
 use bevy::DefaultPlugins;
-use bevy::prelude::{default, in_state, IntoScheduleConfigs, WindowPlugin};
+use bevy::prelude::{default, WindowPlugin};
 
 pub mod camera;
 pub mod debug;
@@ -43,7 +43,6 @@ impl Plugin for RrengPlugin {
             .add_plugins(debug::DebugPlugin)
             .add_plugins(screens::ScreensPlugin)
             .add_systems(Update, utils::fix_apparent_size)
-            .add_event::<events::DataEvent>()
             .add_event::<events::GameEvent>()
             .add_event::<events::GraphicsEvent>();
     }
