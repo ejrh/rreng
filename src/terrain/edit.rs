@@ -16,7 +16,9 @@ pub fn click_point(
     selected_point: Res<SelectedPoint>,
     mut terrain_data: Single<&mut TerrainData, With<LevelLabel>>,
 ) {
-    let elevation = &terrain_data.layers[&TerrainLayer::Elevation];
+    let Some(elevation) = terrain_data.layers.get(&TerrainLayer::Elevation)
+    else { return; };
+
     let mut _guard = elevation.write().unwrap();
     let elevation = _guard.deref_mut();
 
@@ -51,7 +53,9 @@ pub fn drag_point(
     mut start_point: Local<SelectedPoint>,
     mut gizmos: Gizmos,
 ) {
-    let elevation = &terrain_data.layers[&TerrainLayer::Elevation];
+    let Some(elevation) = terrain_data.layers.get(&TerrainLayer::Elevation)
+    else { return; };
+
     let mut _guard = elevation.write().unwrap();
     let elevation = _guard.deref_mut();
 
