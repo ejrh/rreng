@@ -4,6 +4,8 @@ use bevy::picking::backend::prelude::RayMap;
 use bevy::picking::backend::ray::RayId;
 use bevy::picking::pointer::PointerId;
 use bevy::prelude::*;
+use crate::level::LevelLabel;
+use crate::level::loading::LoadingState;
 use crate::screens::Screen;
 use crate::terrain::rendering::TerrainMesh;
 use crate::terrain::TerrainLayer;
@@ -20,6 +22,7 @@ pub struct SelectionMarker;
 pub fn create_marker(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    level: Single<Entity, With<LevelLabel>>,
     mut commands: Commands,
 ) {
     let mesh: Mesh = Sphere::new(2.0).into();
@@ -32,6 +35,7 @@ pub fn create_marker(
         ConstantApparentSize(100.0..250.0),
         NotShadowCaster,
         NotShadowReceiver,
+        ChildOf(*level),
     ));
 }
 

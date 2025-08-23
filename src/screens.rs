@@ -1,6 +1,6 @@
 use std::f32::consts::{PI, TAU};
 
-use bevy::app::{App, Plugin, Update};
+use bevy::app::{App, Plugin, Startup, Update};
 use bevy::color::Color;
 use bevy::color::palettes::basic::{GRAY, WHITE, YELLOW};
 use bevy::color::palettes::css::{GREY, SILVER};
@@ -21,6 +21,7 @@ use crate::train::create_train;
 use crate::{camera, level, screens, tools, utils};
 use crate::events::GameEvent;
 use crate::level::loading::{LoadingStage, LoadingStageLabel};
+use crate::level::selection;
 use crate::theme::Theme;
 use crate::tools::Tools;
 
@@ -308,5 +309,6 @@ pub fn setup_playing(
     }
 
     commands.run_system_cached(camera::create_camera_position_text);
-    commands.run_system_cached(level::selection::create_cursor_position_text);
+    commands.run_system_cached(selection::create_marker);
+    commands.run_system_cached(selection::create_cursor_position_text);
 }

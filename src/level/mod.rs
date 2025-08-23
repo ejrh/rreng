@@ -30,7 +30,6 @@ impl Plugin for LevelPlugin {
             .add_systems(Update, handle_game_events.run_if(on_event::<GameEvent>));
 
         app
-            .add_systems(Startup, selection::create_marker)
             .add_systems(Update, selection::update_selected_point)
             .add_systems(Update, selection::update_cursor_position);
     }
