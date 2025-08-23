@@ -2,11 +2,13 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::events::GameEvent;
+use crate::events::{GameEvent, GraphicsEvent};
 use crate::level::datafile::{DataFile, TrackToLoad};
 use crate::level::LevelLabel;
 use crate::screens::Screen;
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
+use crate::terrain::rendering::{LayerLabel, MeshTaskQueue};
+use crate::terrain::rendering::mesh_tree::MeshTree;
 use crate::terrain::rendering::water::WaterLabel;
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
 use crate::track::create_track;
@@ -46,6 +48,8 @@ pub struct LoadingState {
     files_expected: u32,
     tiles_loaded: u32,
     tiles_expected: u32,
+    meshes_built: u32,
+    meshes_expected: u32,
 }
 
 impl LoadingState {
@@ -59,6 +63,8 @@ impl LoadingState {
             files_expected: 2,
             tiles_loaded: 0,
             tiles_expected: 0,
+            meshes_built: 0,
+            meshes_expected: 0,
         }
     }
 }
@@ -69,6 +75,7 @@ pub fn check_loading_state(
     tilesets_assets: Res<Assets<TileSets>>,
     elevation_assets: Res<Assets<ElevationFile>>,
     asset_server: Res<AssetServer>,
+    mesh_trees: Query<&MeshTree>,
     mut commands: Commands,
 ) {
     let (level_id, terrain, terrain_data, loading_state) = &mut *level;
@@ -131,8 +138,22 @@ pub fn check_loading_state(
             }
         }
         LoadingStage::ReticulatingSplines => {
-
-            loading_state.stage = LoadingStage::CreatingObjects;
+            loading_state.meshes_built = 0;
+            loading_state.meshes_expected = 0;
+            for tree in mesh_trees {
+                tree.walk(&mut |t, id| {
+                    if t.valid(id) {
+                        loading_state.meshes_expected += 1;
+                        if t.populated(id) {
+                            loading_state.meshes_built += 1;
+                        }
+                    }
+                    true
+                });
+            }
+            if loading_state.meshes_built == loading_state.meshes_expected {
+                loading_state.stage = LoadingStage::CreatingObjects;
+            }
         }
         LoadingStage::CreatingObjects => {
             let Some(datafile) = datafile_assets.get(&loading_state.datafile_handle)
@@ -165,7 +186,7 @@ pub fn update_loading_progress(
         let (done, expected) = match label.0 {
             LoadingStage::LoadingData => (loading_state.files_loaded, loading_state.files_expected),
             LoadingStage::LoadingTerrain => (loading_state.tiles_loaded, loading_state.tiles_expected),
-            LoadingStage::ReticulatingSplines => (0, 0),
+            LoadingStage::ReticulatingSplines => (loading_state.meshes_built, loading_state.meshes_expected),
             LoadingStage::CreatingObjects => (0, 0),
         };
 
