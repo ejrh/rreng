@@ -304,6 +304,7 @@ pub fn setup_playing(
     if tools.is_some() {
         commands.run_system_cached(tools::create_tools);
         commands.run_system_cached(tools::create_terraform_tools);
+        commands.run_system_cached(tools::create_track_tools);
     }
 
     commands.run_system_cached(camera::create_camera_position_text);
