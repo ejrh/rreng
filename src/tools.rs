@@ -83,11 +83,15 @@ pub(crate) fn create_tools(
         (Tool::Track, "Track", true),
         (Tool::Train, "Train", false),
     ] {
-        toolbar::create_button(&mut commands, toolbar_line_id, enabled)
+        let mut b = toolbar::create_button(&mut commands, toolbar_line_id, enabled);
+        b
             .insert(tool)
             .with_children(|p| {
                 p.spawn(toolbar::create_label(button_font.clone(), label));
             });
+        if tool == Tool::Select {
+            b.insert(Interaction::Pressed);
+        }
     }
 }
 
@@ -100,7 +104,6 @@ pub fn create_terraform_tools(
     let button_font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
     let toolbar_line_id = toolbar::create_line(&mut commands, *toolbar_id)
-        .insert(Visibility::Hidden)
         .id();
 
     for (tool, label, enabled) in [
@@ -129,7 +132,6 @@ pub fn create_track_tools(
     let button_font = asset_server.load("fonts/FiraMono-Medium.ttf");
 
     let toolbar_line_id = toolbar::create_line(&mut commands, *toolbar_id)
-        .insert(Visibility::Hidden)
         .id();
 
     for (tool, label, enabled) in [
@@ -150,7 +152,7 @@ fn update_tool_buttons(
     tools: ResMut<Tools>,
     query: Query<(&Tool, &Interaction), Changed<Interaction>>,
     mut state: ResMut<NextState<Tool>>,
-    mut toolbar_lines: Query<(Entity, &mut Visibility), With<ToolbarLine>>,
+    mut toolbar_lines: Query<(Entity, &mut Node), With<ToolbarLine>>,
 ) {
     let Some(tool) = query.iter()
         .filter_map(|(tool, interaction)|
@@ -161,12 +163,12 @@ fn update_tool_buttons(
     state.set(tool);
     info!("Tool: {tool:?}");
 
-    for (line_id, mut vis) in toolbar_lines.iter_mut() {
+    for (line_id, mut node) in toolbar_lines.iter_mut() {
         if line_id == tools.terraform_line_id {
-            *vis = if matches!(tool, Tool::Terraform) { Visibility::Visible } else { Visibility::Hidden };
+            node.display = if matches!(tool, Tool::Terraform) { Display::Flex } else { Display::None };
         }
         if line_id == tools.track_line_id {
-            *vis = if matches!(tool, Tool::Track) { Visibility::Visible } else { Visibility::Hidden };
+            node.display = if matches!(tool, Tool::Track) { Display::Flex } else { Display::None };
         }
     }
 }
