@@ -1,14 +1,44 @@
 use std::f32::consts::PI;
 
-use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
-use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass};
+use bevy::app::{App, Plugin, Startup, Update};
+use bevy::color::Color;
+use bevy::ecs::{
+    error::Result,
+    query::{With},
+    reflect::ReflectResource,
+    resource::Resource,
+    schedule::{Condition, IntoScheduleConfigs},
+    system::{Query, Single},
+    world::World,
+    system::{Res, ResMut},
+};
+use bevy::gizmos::gizmos::Gizmos;
+use bevy::input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton};
+use bevy::log::info;
+use bevy::math::{Isometry3d, Quat, Vec2, Vec3};
+use bevy::pbr::SpotLight;
+use bevy::reflect::Reflect;
+use bevy::state::{
+    app::AppExtStates,
+    condition::in_state,
+    state::{
+        States, NextState, State
+    }
+};
+use bevy::transform::components::{GlobalTransform, Transform};
+use bevy::ui::Node;
+use bevy_egui::{EguiContext, EguiContexts, EguiGlobalSettings, EguiPlugin, EguiPrimaryContextPass, PrimaryEguiContext};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::level::LevelLabel;
 use crate::level::selection::SelectedPoint;
 use crate::terrain::Terrain;
+use crate::terrain::rendering::{LayerLabel, TerrainMesh};
+use crate::track::bridge::Bridge;
 use crate::track::point::Point;
+use crate::track::segment::Segment;
+use crate::train::TrainCar;
+use crate::worker::Worker;
 
 pub struct DebugPlugin;
 
@@ -31,6 +61,7 @@ impl DebugState {
 #[derive(Default, Reflect, Resource)]
 #[reflect(Resource)]
 struct DebugOptions {
+    world_stats: bool,
     world_inspector: bool,
     debug_terrain: bool,
     debug_workers: bool,
@@ -56,6 +87,7 @@ impl Plugin for DebugPlugin {
             .add_systems(EguiPrimaryContextPass, debug_options_ui.run_if(in_state(DebugState::On)));
 
         app
+            .add_systems(EguiPrimaryContextPass, world_stats.run_if(debug_option!(world_stats)))
             .add_plugins(WorldInspectorPlugin::new().run_if(debug_option!(world_inspector)))
             .add_systems(Update, debug_terrain.run_if(debug_option!(debug_terrain)))
             .add_systems(Update, crate::worker::debug::debug_workers.run_if(debug_option!(debug_workers)))
@@ -93,6 +125,7 @@ fn debug_options_ui(
         .default_size(DEFAULT_SIZE)
         .show(egui_contexts.ctx_mut()?, |ui| {
             egui::ScrollArea::both().show(ui, |ui| {
+                ui.checkbox(&mut options.world_stats, "World Stats");
                 ui.checkbox(&mut options.world_inspector, "World Inspector");
                 ui.heading("Gizmos");
                 ui.checkbox(&mut options.debug_terrain, "Debug Terrain");
@@ -105,6 +138,65 @@ fn debug_options_ui(
             });
         });
     Ok(())
+}
+
+fn world_stats(
+    world: &mut World,
+) {
+    const DEFAULT_POS: (f32, f32) = (800., 300.);
+
+    let egui_context = world
+        .query_filtered::<&mut EguiContext, With<PrimaryEguiContext>>()
+        .single(world);
+
+    let Ok(egui_context) = egui_context else {
+        return;
+    };
+    let mut egui_context = egui_context.clone();
+
+    egui::Window::new("World Stats")
+        .default_pos(DEFAULT_POS)
+        .show(egui_context.get_mut(), |ui| {
+            fn row(ui: &mut egui::Ui, name: &str, value: usize) {
+                ui.label(name);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(format!("{}", value));
+                });
+                ui.end_row()
+            }
+
+            ui.horizontal_top(|ui| {
+                egui::Grid::new("stats").show(ui, |ui| {
+                    ui.heading("ECS");
+                    ui.end_row();
+                    row(ui, "Entities", world.entities().len() as usize);
+                    row(ui, "Components", world.components().len());
+                    row(ui, "Archetypes", world.archetypes().len());
+                    row(ui, "UI Nodes", world.query::<&Node>().iter(&world).count());
+
+                    ui.heading("Terrain");
+                    ui.end_row();
+                    row(ui, "Layers", world.query::<&LayerLabel>().iter(&world).count());
+                    row(ui, "Blocks", world.query::<&TerrainMesh>().iter(&world).count());
+                });
+
+                egui::Grid::new("stats2").show(ui, |ui| {
+                    ui.heading("Tracks");
+                    ui.end_row();
+                    row(ui, "Points", world.query::<&Point>().iter(&world).count());
+                    row(ui, "Segments", world.query::<&Segment>().iter(&world).count());
+                    row(ui, "Bridges", world.query::<&Bridge>().iter(&world).count());
+
+                    ui.heading("Trains");
+                    ui.end_row();
+                    row(ui, "Cars", world.query::<&TrainCar>().iter(&world).count());
+
+                    ui.heading("Workers");
+                    ui.end_row();
+                    row(ui, "Workers", world.query::<&Worker>().iter(&world).count());
+                });
+            })
+        });
 }
 
 fn debug_terrain(
