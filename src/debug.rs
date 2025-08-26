@@ -58,7 +58,7 @@ impl DebugState {
     }
 }
 
-#[derive(Default, Reflect, Resource)]
+#[derive(Reflect, Resource)]
 #[reflect(Resource)]
 struct DebugOptions {
     world_stats: bool,
@@ -68,6 +68,20 @@ struct DebugOptions {
     show_points: bool,
     show_lights: bool,
     log_click: bool,
+}
+
+impl Default for DebugOptions {
+    fn default() -> Self {
+        Self {
+            world_stats: true,
+            world_inspector: true,
+            debug_terrain: false,
+            debug_workers: false,
+            show_points: false,
+            show_lights: false,
+            log_click: false,
+        }
+    }
 }
 
 #[macro_export]
@@ -117,14 +131,12 @@ fn debug_options_ui(
     mut egui_contexts: EguiContexts,
     mut options: ResMut<DebugOptions>,
 ) -> Result {
-    const DEFAULT_POS: (f32, f32) = (800., 100.);
-    const DEFAULT_SIZE: (f32, f32) = (240., 160.);
+    const DEFAULT_POS: (f32, f32) = (720., 16.);
 
     egui::Window::new("Debug Options")
         .default_pos(DEFAULT_POS)
-        .default_size(DEFAULT_SIZE)
         .show(egui_contexts.ctx_mut()?, |ui| {
-            egui::ScrollArea::both().show(ui, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.checkbox(&mut options.world_stats, "World Stats");
                 ui.checkbox(&mut options.world_inspector, "World Inspector");
                 ui.heading("Gizmos");
@@ -134,7 +146,6 @@ fn debug_options_ui(
                 ui.checkbox(&mut options.show_lights, "Show Lights");
                 ui.heading("Logging");
                 ui.checkbox(&mut options.log_click, "Clicks");
-                ui.allocate_space(ui.available_size());
             });
         });
     Ok(())
@@ -143,7 +154,7 @@ fn debug_options_ui(
 fn world_stats(
     world: &mut World,
 ) {
-    const DEFAULT_POS: (f32, f32) = (800., 300.);
+    const DEFAULT_POS: (f32, f32) = (380., 16.);
 
     let egui_context = world
         .query_filtered::<&mut EguiContext, With<PrimaryEguiContext>>()
