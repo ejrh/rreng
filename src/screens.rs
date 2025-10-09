@@ -1,6 +1,6 @@
 use std::f32::consts::{PI, TAU};
 
-use bevy::app::{App, Plugin, Startup, Update};
+use bevy::app::{App, Plugin, Update};
 use bevy::color::Color;
 use bevy::color::palettes::basic::{GRAY, WHITE, YELLOW};
 use bevy::color::palettes::css::{GREY, SILVER};
@@ -8,18 +8,18 @@ use bevy::ecs::children;
 use bevy::input::common_conditions::input_just_pressed;
 use bevy::log::info;
 use bevy::math::Vec3;
-use bevy::prelude::{in_state, AppExtStates, ChildOf, Commands, Condition, IntoScheduleConfigs, KeyCode, Name, Node, OnEnter, RepeatedGridTrack, Res, Single, SpawnRelated, StateScoped, Text, TextColor, TextFont, TextSpan, Val};
+use bevy::prelude::{in_state, AppExtStates, ChildOf, Commands, DespawnOnExit, IntoScheduleConfigs, KeyCode, Name, Node, OnEnter, RepeatedGridTrack, Res, Single, SpawnRelated, SystemCondition, Text, TextColor, TextFont, TextSpan, Val};
 use bevy::state::state::States;
 use bevy::ui::{AlignItems, AlignSelf, BorderColor, BorderRadius, Display, FlexDirection, JustifyItems, JustifySelf, UiRect};
 use bevy::utils::default;
-use rand::{thread_rng, Rng, seq::SliceRandom};
+use rand::seq::IndexedRandom;
 
 use crate::camera::{CameraMode, CameraState};
 use crate::track::bridge::Bridge;
 use crate::track::create_track;
 use crate::train::create_train;
-use crate::{camera, level, screens, tools, utils};
-use crate::events::GameEvent;
+use crate::{camera, screens, tools, utils};
+use crate::events::GameMessage;
 use crate::level::loading::{LoadingStage, LoadingStageLabel};
 use crate::level::selection;
 use crate::theme::Theme;
@@ -46,11 +46,11 @@ impl Plugin for ScreensPlugin {
 }
 
 fn load_level(mut commands: Commands) {
-    commands.send_event(GameEvent::LoadLevel("data/jvl.ron".to_owned()));
+    commands.write_message(GameMessage::LoadLevel("data/jvl.ron".to_owned()));
 }
 
 fn exit_level(mut commands: Commands) {
-    commands.send_event(GameEvent::ExitLevel);
+    commands.write_message(GameMessage::ExitLevel);
 }
 
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, States)]
@@ -86,17 +86,17 @@ pub fn setup_title(
             ..default()
         },
         BorderRadius::all(Val::Percent(1.0)),
-        BorderColor::from(Color::Srgba(YELLOW)),
-        StateScoped(Screen::Title),
+        BorderColor::all(Color::Srgba(YELLOW)),
+        DespawnOnExit(Screen::Title),
         children![
             (
                 Text("RRENG".to_owned()),
-                TextFont::from_font(theme.font.clone()).with_font_size(80.0),
+                TextFont::from(theme.font.clone()).with_font_size(80.0),
                 TextColor(Color::Srgba(YELLOW)),
             ),
             (
                 Text(version_str.to_owned()),
-                TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                TextFont::from(theme.font.clone()).with_font_size(20.0),
                 TextColor(Color::Srgba(SILVER)),
             ),
             Node {
@@ -105,17 +105,17 @@ pub fn setup_title(
             },
             (
                 Text::default(),
-                TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                TextFont::from(theme.font.clone()).with_font_size(20.0),
                 TextColor(Color::Srgba(GREY)),
                 children![
                     (TextSpan("Press ".into()),
-                     TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                     TextFont::from(theme.font.clone()).with_font_size(20.0),
                      TextColor(Color::Srgba(GREY))),
                     (TextSpan("J".into()),
-                     TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                     TextFont::from(theme.font.clone()).with_font_size(20.0),
                      TextColor(Color::Srgba(YELLOW))),
                     (TextSpan(" to load the level".into()),
-                     TextFont::from_font(theme.font.clone()).with_font_size(20.0),
+                     TextFont::from(theme.font.clone()).with_font_size(20.0),
                      TextColor(Color::Srgba(GREY)))
                 ],
             ),
@@ -169,7 +169,7 @@ pub fn setup_title(
             (make_figure_8(60.0, 10.0, 52, 6), 1, -1.0, true),
         ],
     ];
-    if let Some(parts) = layouts.choose(&mut thread_rng()) {
+    if let Some(parts) = layouts.choose(&mut rand::rng()) {
         for (points, trains, spd, bridge) in parts {
             let (track_id, _, segment_ids) = create_track("Title", points, true, &mut commands);
 
@@ -180,12 +180,12 @@ pub fn setup_title(
                 );
             }
 
-            commands.entity(track_id).insert(StateScoped(Screen::Title));
+            commands.entity(track_id).insert(DespawnOnExit(Screen::Title));
 
             for i in 0..*trains {
                 let segment_id = segment_ids[i * (segment_ids.len() / *trains)];
                 let train_id = create_train("Title", segment_id, 0.0, *spd, &mut commands);
-                commands.entity(train_id).insert(StateScoped(Screen::Title));
+                commands.entity(train_id).insert(DespawnOnExit(Screen::Title));
             }
         }
     }
@@ -213,7 +213,7 @@ pub fn setup_loading(
             align_items: AlignItems::Stretch,
             ..default()
         },
-        StateScoped(Screen::Loading),
+        DespawnOnExit(Screen::Loading),
         children![(
             Node {
                 align_self: AlignSelf::Center,
@@ -221,7 +221,7 @@ pub fn setup_loading(
                 ..default()
             },
             Text("Loading...".to_owned()),
-            TextFont::from_font(theme.font.clone()).with_font_size(40.0),
+            TextFont::from(theme.font.clone()).with_font_size(40.0),
             TextColor(Color::Srgba(GREY)),
         )]
     )).id();
@@ -283,7 +283,7 @@ pub fn setup_playing(
             display: Display::Grid,
             ..default()
         },
-        StateScoped(Screen::Playing),
+        DespawnOnExit(Screen::Playing),
         children![
             (
                 Node {

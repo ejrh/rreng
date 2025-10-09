@@ -1,7 +1,8 @@
 use bevy::asset::{AssetServer, Assets, Handle};
 use bevy::color::Color;
+use bevy::light::{NotShadowCaster, NotShadowReceiver, SpotLight};
 use bevy::math::{Quat, Vec3};
-use bevy::pbr::{MeshMaterial3d, NotShadowCaster, NotShadowReceiver, SpotLight};
+use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::{Added, ChildOf, Children, Commands, Entity, GltfAssetLabel, LinearRgba, Mesh, Mesh3d, Meshable, Query, Res, ResMut, Resource, Scene, SceneRoot, Sphere, StandardMaterial, Transform};
 
 use crate::train::TrainCar;

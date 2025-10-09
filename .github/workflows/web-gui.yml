@@ -32,6 +32,8 @@ jobs:
           echo "RRENG_VERSION_EXTRA=-wip-$DATEPART-$GITPART" >> $GITHUB_ENV
 
       - name: Build
+        env:
+          RUSTFLAGS: --cfg getrandom_backend="wasm_js"
         run: cargo build --release --target wasm32-unknown-unknown
 
       - name: Generate bindings

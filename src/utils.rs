@@ -15,10 +15,10 @@ pub fn show_fps(diagnostics: Res<DiagnosticsStore>, mut window: Single<&mut Wind
 
 pub fn close_on_esc(
     input: Res<ButtonInput<KeyCode>>,
-    mut app_exit_events: EventWriter<AppExit>,
+    mut app_exit_messages: MessageWriter<AppExit>,
 ) {
     if input.just_pressed(KeyCode::Escape) {
-        app_exit_events.write(AppExit::Success);
+        app_exit_messages.write(AppExit::Success);
     }
 }
 

@@ -1,6 +1,6 @@
+use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 
 use crate::track::point::Point;
 use crate::track::segment::{Segment, SegmentLinkage};
@@ -141,7 +141,7 @@ pub fn update_track_meshes(
 fn create_rail_mesh(params: &TrackRenderParams, length: f32, open_start: bool, open_end: bool, start_normal: Vec3, end_normal: Vec3) -> Mesh {
     const GAUGE: f32 = 1.435;
 
-    let rail_profile = BoxedPolyline2d::new(params.rail_profile.clone());
+    let rail_profile = Polyline2d::new(params.rail_profile.iter().copied());
     let verts: Vec<_> = rail_profile.vertices.iter().map(|pt| Vec2::new(pt.x + GAUGE/2.0, pt.y + params.rail_height)).collect::<Vec<_>>();
     let mut mesh = extrusion(&verts, length, open_start, open_end, start_normal, end_normal);
 
@@ -208,7 +208,7 @@ fn extrusion(profile: &[Vec2], length: f32, open_start: bool, open_end: bool, st
 }
 
 fn create_bed_mesh(params: &TrackRenderParams, length: f32, open_start: bool, open_end: bool, start_normal: Vec3, end_normal: Vec3) -> Mesh {
-    let bed_profile = BoxedPolyline2d::new(params.bed_profile.clone());
+    let bed_profile = Polyline2d::new(params.bed_profile.iter().copied());
     extrusion(&bed_profile.vertices, length, open_start, open_end, start_normal, end_normal)
 }
 

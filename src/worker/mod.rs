@@ -40,8 +40,6 @@ pub struct WorkerPlugin;
 impl Plugin for WorkerPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<Worker>()
-            .register_type::<Behaviour>()
             .init_resource::<rendering::WorkerRenderParams>()
             .add_systems(Startup, rendering::setup_render_params)
             .add_systems(PostUpdate, rendering::render_workers)
@@ -77,11 +75,11 @@ pub fn create_workers(
         )).id();
 
     for _ in 0..num_workers {
-        let mut rng = rand::thread_rng();
+        let mut rng = rand::rng();
         let pos = Vec3::new(
-            rng.gen_range(0.0..(terrain.size[1] as f32)),
+            rng.random_range(0.0..(terrain.size[1] as f32)),
             0.0,
-            rng.gen_range(0.0..(terrain.size[0] as f32))
+            rng.random_range(0.0..(terrain.size[0] as f32))
         );
         commands.spawn((
             Worker { acceleration: 1.0, ..default() }, Transform::from_translation(pos),

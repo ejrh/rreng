@@ -22,7 +22,6 @@ pub struct TrainPlugin;
 impl Plugin for TrainPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<TrainCar>()
             .init_resource::<TrainRenderParams>()
             .add_systems(Startup, setup_render_params)
             .add_systems(Update, render_trains)

@@ -1,6 +1,6 @@
 use std::f32::consts::TAU;
 
-use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
+use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::prelude::*;
 
 pub struct SkyPlugin;
@@ -8,7 +8,6 @@ pub struct SkyPlugin;
 impl Plugin for SkyPlugin {
     fn build(&self, app: &mut App) {
         app
-        .register_type::<Sun>()
         .add_systems(Startup, create_lights)
         .add_systems(Update, move_sun);
    }

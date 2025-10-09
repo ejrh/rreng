@@ -2,17 +2,15 @@ use std::sync::{Arc, RwLock};
 
 use bevy::{
     prelude::*,
-    render::{
-        mesh::PrimitiveTopology,
-        render_asset::RenderAssetUsages
-    }};
-use bevy::render::mesh::MeshAabb;
-use bevy::render::primitives::Aabb;
+    asset::RenderAssetUsages,
+    mesh::PrimitiveTopology,
+};
+use bevy::camera::primitives::{Aabb, MeshAabb};
 use bevy::tasks::{block_on, AsyncComputeTaskPool, Task};
 use bevy::tasks::futures_lite::future;
 use ndarray::{s, Array2};
 
-use crate::events::GraphicsEvent;
+use crate::events::GraphicsMessage;
 use crate::level::LevelLabel;
 use crate::terrain::heightmap::heightmap_to_mesh;
 use crate::terrain::rtin::{triangulate_rtin, Triangle, Triangulation};
@@ -28,7 +26,6 @@ pub(crate) struct TerrainRenderingPlugin;
 impl Plugin for TerrainRenderingPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<TerrainMesh>()
             .add_systems(Startup, init_render_params)
             .init_resource::<MeshTaskQueue>()
             .add_systems(Update, water::update_water)
@@ -245,7 +242,6 @@ pub fn handle_mesh_tasks(
     mut mesh_task_queue: ResMut<MeshTaskQueue>,
     mut mesh_trees: Query<(Entity, &LayerLabel, &mut MeshTree)>,
     mut commands: Commands,
-    mut events: EventWriter<GraphicsEvent>,
 ) {
     if mesh_task_queue.0.is_empty() { return; }
 
@@ -288,7 +284,7 @@ pub fn handle_mesh_tasks(
     }
 
     if any_change {
-        events.write(GraphicsEvent::RenderTerrain);
+        commands.write_message(GraphicsMessage::RenderTerrain);
     }
 }
 
@@ -297,12 +293,12 @@ pub fn select_meshes(
     camera: Single<&GlobalTransform, With<Camera>>,
     mesh_trees: Query<&mut MeshTree>,
     mut meshes: Query<(&GlobalTransform, &Aabb, &mut Visibility), Without<Camera>>,
-    mut events: EventReader<GraphicsEvent>,
+    mut messages: MessageReader<GraphicsMessage>,
 ) {
     const TOLERANCE: f32 = 50.0;
 
-    if !events.read().any(|e|
-        matches!(e, GraphicsEvent::MoveCamera | GraphicsEvent::RenderTerrain)
+    if !messages.read().any(|e|
+        matches!(e, GraphicsMessage::MoveCamera | GraphicsMessage::RenderTerrain)
     ) {
         return;
     }

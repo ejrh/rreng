@@ -1,7 +1,7 @@
 use bevy::app::{App, Startup};
 use bevy::prelude::Commands;
 
-use rreng::events::GameEvent;
+use rreng::events::GameMessage;
 use rreng::RrengPlugin;
 
 fn main() {
@@ -16,7 +16,7 @@ fn main() {
 fn load_initial_level(mut commands: Commands) {
     let datafile = ron::from_str(LEVEL_FILE).unwrap();
 
-    commands.send_event(GameEvent::LoadLevelData(datafile));
+    commands.send_event(GameMessage::LoadLevelData(datafile));
 }
 
 const LEVEL_FILE: &str = r#"

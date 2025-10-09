@@ -3,7 +3,6 @@ use bevy::prelude::ReflectResource;
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::asset::{Assets, Handle};
 use bevy::color::Color;
-use bevy::log::info;
 use bevy::math::Vec3;
 use bevy::pbr::{MeshMaterial3d, StandardMaterial};
 use bevy::prelude::{Changed, Commands, Component, Mesh, Or, Query, Resource, Transform};
@@ -16,8 +15,6 @@ pub struct BridgePlugin;
 impl Plugin for BridgePlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<BridgeRenderParams>()
-            .register_type::<Bridge>()
             .init_resource::<BridgeRenderParams>()
             .add_systems(Startup, init_render_params)
             .add_systems(Update, render_bridges);

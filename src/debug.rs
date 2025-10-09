@@ -7,16 +7,16 @@ use bevy::ecs::{
     query::{With},
     reflect::ReflectResource,
     resource::Resource,
-    schedule::{Condition, IntoScheduleConfigs},
+    schedule::{IntoScheduleConfigs, SystemCondition},
     system::{Query, Single},
     world::World,
     system::{Res, ResMut},
 };
 use bevy::gizmos::gizmos::Gizmos;
 use bevy::input::{ButtonInput, keyboard::KeyCode, mouse::MouseButton};
+use bevy::light::SpotLight;
 use bevy::log::info;
 use bevy::math::{Isometry3d, Quat, Vec2, Vec3};
-use bevy::pbr::SpotLight;
 use bevy::reflect::Reflect;
 use bevy::state::{
     app::AppExtStates,
@@ -92,7 +92,6 @@ macro_rules! debug_option {
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<DebugOptions>()
             .add_plugins(EguiPlugin::default())
             .init_state::<DebugState>()
             .init_resource::<DebugOptions>()
@@ -183,28 +182,28 @@ fn world_stats(
                     row(ui, "Entities", world.entities().len() as usize);
                     row(ui, "Components", world.components().len());
                     row(ui, "Archetypes", world.archetypes().len());
-                    row(ui, "UI Nodes", world.query::<&Node>().iter(&world).count());
+                    row(ui, "UI Nodes", world.query::<&Node>().iter(world).count());
 
                     ui.heading("Terrain");
                     ui.end_row();
-                    row(ui, "Layers", world.query::<&LayerLabel>().iter(&world).count());
-                    row(ui, "Blocks", world.query::<&TerrainMesh>().iter(&world).count());
+                    row(ui, "Layers", world.query::<&LayerLabel>().iter(world).count());
+                    row(ui, "Blocks", world.query::<&TerrainMesh>().iter(world).count());
                 });
 
                 egui::Grid::new("stats2").show(ui, |ui| {
                     ui.heading("Tracks");
                     ui.end_row();
-                    row(ui, "Points", world.query::<&Point>().iter(&world).count());
-                    row(ui, "Segments", world.query::<&Segment>().iter(&world).count());
-                    row(ui, "Bridges", world.query::<&Bridge>().iter(&world).count());
+                    row(ui, "Points", world.query::<&Point>().iter(world).count());
+                    row(ui, "Segments", world.query::<&Segment>().iter(world).count());
+                    row(ui, "Bridges", world.query::<&Bridge>().iter(world).count());
 
                     ui.heading("Trains");
                     ui.end_row();
-                    row(ui, "Cars", world.query::<&TrainCar>().iter(&world).count());
+                    row(ui, "Cars", world.query::<&TrainCar>().iter(world).count());
 
                     ui.heading("Workers");
                     ui.end_row();
-                    row(ui, "Workers", world.query::<&Worker>().iter(&world).count());
+                    row(ui, "Workers", world.query::<&Worker>().iter(world).count());
                 });
             })
         });

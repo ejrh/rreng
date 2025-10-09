@@ -1,15 +1,15 @@
-use bevy::prelude::Event;
+use bevy::ecs::message::Message;
 
-#[derive(Debug, Event)]
-pub enum GameEvent {
+#[derive(Debug, Message)]
+pub enum GameMessage {
     LoadLevel(String),
     LoadLevelData(crate::level::datafile::DataFile),
     LoadingComplete,
     ExitLevel,
 }
 
-#[derive(Debug, Event)]
-pub enum GraphicsEvent {
+#[derive(Debug, Message)]
+pub enum GraphicsMessage {
     LoadedLevel,
     RenderTerrain,
     MoveCamera,

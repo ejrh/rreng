@@ -16,7 +16,7 @@ pub fn triangulate_basic(points: &ndarray::ArrayView2<f32>) -> Triangulation {
     let mut triangles = Vec::new();
     for i in 0..cells_shape.0 {
         for j in 0..cells_shape.1 {
-            let v1 = [i, j];
+            let v1 = [i, j]; 
             let v2 = [i, j + 1];
             let v3 = [i + 1, j];
             let v4 = [i + 1, j + 1];

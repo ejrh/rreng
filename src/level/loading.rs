@@ -2,12 +2,11 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use crate::events::{GameEvent, GraphicsEvent};
+use crate::events::GameMessage;
 use crate::level::datafile::{DataFile, TrackToLoad};
 use crate::level::LevelLabel;
 use crate::screens::Screen;
 use crate::terrain::{Terrain, TerrainData, TerrainLayer};
-use crate::terrain::rendering::{LayerLabel, MeshTaskQueue};
 use crate::terrain::rendering::mesh_tree::MeshTree;
 use crate::terrain::rendering::water::WaterLabel;
 use crate::terrain::tiles::{ElevationFile, Tile, TileSets};
@@ -173,7 +172,7 @@ pub fn check_loading_state(
 
             crate::worker::create_workers(*level_id, terrain, &mut commands, 1);
 
-            commands.send_event(GameEvent::LoadingComplete);
+            commands.write_message(GameMessage::LoadingComplete);
         }
     }
 }

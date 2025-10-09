@@ -1,5 +1,5 @@
 use bevy::asset::Assets;
-use bevy::prelude::{info, ChildOf, Children, Commands, Component, Cuboid, DetectChanges, Entity, Mesh, Mesh3d, MeshMaterial3d, Mut, Res, ResMut, Single, Transform, Vec3, Visibility, With};
+use bevy::prelude::{info, ChildOf, Children, Commands, Component, Cuboid, DetectChanges, Entity, Mesh, Mesh3d, MeshMaterial3d, Mut, Res, ResMut, Single, Vec3, With};
 
 use crate::level::LevelLabel;
 use crate::terrain::rendering::TerrainRenderParams;

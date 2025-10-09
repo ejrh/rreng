@@ -1,13 +1,14 @@
 use std::f32::consts::TAU;
-use bevy::prelude::{Commands, Component, Entity, EventReader, NextState, OnEnter, Ref, Res, ResMut, Single, StateScoped, Visibility, With};
-use bevy::app::{App, Plugin, Startup, Update};
+
+use bevy::prelude::{on_message, Commands, Component, DespawnOnExit, Entity, MessageReader, NextState, OnEnter, Ref, Res, ResMut, Single, Visibility, With};
+use bevy::app::{App, Plugin, Update};
 use bevy::asset::{AssetApp, AssetServer, Assets};
+use bevy::ecs::schedule::{IntoScheduleConfigs};
 use bevy::log::info;
 use bevy::math::Vec3;
-use bevy::prelude::{on_event, IntoScheduleConfigs};
 
 use crate::camera::{CameraMode, CameraState};
-use crate::events::GameEvent;
+use crate::events::GameMessage;
 use crate::level::datafile::DataFile;
 use crate::level::loading::new_level;
 use crate::screens::Screen;
@@ -27,7 +28,7 @@ impl Plugin for LevelPlugin {
             .add_plugins(loading::LoadingPlugin)
             .add_systems(OnEnter(Screen::Playing), set_camera_range)
             .init_resource::<selection::SelectedPoint>()
-            .add_systems(Update, handle_game_events.run_if(on_event::<GameEvent>));
+            .add_systems(Update, handle_game_messages.run_if(on_message::<GameMessage>));
 
         app
             .add_systems(Update, selection::update_selected_point)
@@ -38,8 +39,8 @@ impl Plugin for LevelPlugin {
 #[derive(Component)]
 pub struct LevelLabel;
 
-pub fn handle_game_events(
-    mut events: EventReader<GameEvent>,
+pub fn handle_game_messages(
+    mut messages: MessageReader<GameMessage>,
     asset_server: Res<AssetServer>,
     mut datafile_assets: ResMut<Assets<DataFile>>,
     mut next_screen: ResMut<NextState<Screen>>,
@@ -48,30 +49,30 @@ pub fn handle_game_events(
 ) {
     let level_id = level.map(|s| *s);
 
-    for event in events.read() {
+    for event in messages.read() {
         info!("Handling: {:?}", event);
 
         match event {
-            GameEvent::LoadLevel(level_path) => {
+            GameMessage::LoadLevel(level_path) => {
                 commands.spawn(new_level(asset_server.load(level_path)));
                 next_screen.set(Screen::Loading);
             },
-            GameEvent::LoadLevelData(datafile) => {
+            GameMessage::LoadLevelData(datafile) => {
                 let handle = datafile_assets.reserve_handle();
-                datafile_assets.insert(handle.id(), datafile.clone());
+                datafile_assets.insert(handle.id(), datafile.clone()).expect("Failed to insert datafile asset");
                 commands.spawn(new_level(handle));
                 next_screen.set(Screen::Loading);
             },
-            GameEvent::LoadingComplete => {
+            GameMessage::LoadingComplete => {
                 if let Some(level_id) = level_id {
                     commands.entity(level_id).insert((
                         Visibility::Inherited,
-                        StateScoped(Screen::Playing)
+                        DespawnOnExit(Screen::Playing)
                     ));
                 }
                 next_screen.set(Screen::Playing);
             }
-            GameEvent::ExitLevel => {
+            GameMessage::ExitLevel => {
                 next_screen.set(Screen::Title);
             }
         }

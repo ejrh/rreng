@@ -4,6 +4,7 @@ use bevy::log::info;
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use bevy::prelude::{Query, Res, Single, Time, Transform, With};
 use rand::Rng;
+
 use crate::level::LevelLabel;
 use crate::terrain::{Terrain, TerrainData};
 use crate::worker::{Behaviour, Worker};
@@ -19,11 +20,11 @@ pub fn update_workers(
         match *b {
             Behaviour::Idle => {
                 if time.elapsed() - w.behaviour_since > Duration::from_secs_f32(10.0) {
-                    let mut rng = rand::thread_rng();
+                    let mut rng = rand::rng();
                     let mut target = Vec3::new(
-                        rng.gen_range(0.0..(terrain.size[1] as f32)),
+                        rng.random_range(0.0..(terrain.size[1] as f32)),
                         0.0,
-                        rng.gen_range(0.0..(terrain.size[0] as f32))
+                        rng.random_range(0.0..(terrain.size[0] as f32))
                     );
                     target.y = terrain_data.elevation_at(target.xz());
                     *b = Behaviour::WalkingTo(target);

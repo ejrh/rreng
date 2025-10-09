@@ -1,10 +1,9 @@
-use bevy::prelude::{resource_changed, Condition, Query, Single, SpawnRelated, With, Without};
 use bevy::app::{App, Plugin, Startup, Update};
 use bevy::color::Color;
 use bevy::ecs::children;
 use bevy::input::ButtonInput;
 use bevy::input::common_conditions::input_just_pressed;
-use bevy::prelude::{default, AlignItems, AlignSelf, Commands, Component, FlexDirection, IntoScheduleConfigs, JustifySelf, KeyCode, Name, Node, ReflectResource, Res, ResMut, StateScoped, Text, TextColor, TextFont, Time, UiRect, Val, Virtual};
+use bevy::prelude::{default, AlignItems, AlignSelf, Commands, Component, IntoScheduleConfigs, KeyCode, Name, Node, ReflectResource, resource_changed, Res, ResMut, Single, SpawnRelated, SystemCondition, Text, TextColor, TextFont, Time, Val, Virtual, With, Without};
 use bevy::prelude::{Reflect, Resource};
 
 use crate::theme::Theme;
@@ -70,13 +69,13 @@ fn create_speed_ui(
             (
                 SpeedUiText,
                 Text::default(),
-                TextFont::from_font(theme.font.clone()).with_font_size(32.0),
+                TextFont::from(theme.font.clone()).with_font_size(32.0),
                 TextColor(Color::srgba(0.5, 0.5, 0.5, 0.5)),
             ),
             (
                 SpeedUiText2,
                 Text::default(),
-                TextFont::from_font(theme.font.clone()).with_font_size(24.0),
+                TextFont::from(theme.font.clone()).with_font_size(24.0),
                 TextColor(Color::srgba(0.5, 0.5, 0.5, 0.5)),
             ),
         ]

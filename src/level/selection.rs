@@ -1,11 +1,11 @@
 use bevy::color::palettes::basic::GRAY;
-use bevy::pbr::{NotShadowCaster, NotShadowReceiver};
+use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::picking::backend::prelude::RayMap;
 use bevy::picking::backend::ray::RayId;
 use bevy::picking::pointer::PointerId;
 use bevy::prelude::*;
+
 use crate::level::LevelLabel;
-use crate::level::loading::LoadingState;
 use crate::screens::Screen;
 use crate::terrain::rendering::TerrainMesh;
 use crate::terrain::TerrainLayer;
@@ -114,6 +114,6 @@ pub fn create_cursor_position_text(
         },
         TextColor(Color::Srgba(GRAY)),
         CursorPositionLabel,
-        StateScoped(Screen::Playing),
+        DespawnOnExit(Screen::Playing),
     ));
 }

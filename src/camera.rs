@@ -7,7 +7,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::events::GraphicsEvent;
+use crate::events::GraphicsMessage;
 use crate::level::LevelLabel;
 use crate::screens::Screen;
 use crate::terrain::TerrainData;
@@ -17,7 +17,6 @@ pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<CameraState>()
             .add_systems(Startup, create_camera)
             .add_systems(Update, camera_movement)
             .add_systems(Update, update_camera_position)
@@ -147,7 +146,7 @@ fn camera_movement(time: Res<Time<Real>>,
 fn update_camera_position(
     mut camera: Single<(&CameraState, &mut Transform), Changed<CameraState>>,
     terrain_data: Option<Single<&TerrainData, With<LevelLabel>>>,
-    mut events: EventWriter<GraphicsEvent>,
+    mut commands: Commands,
 ) {
     let (state, transform) = &mut *camera;
 
@@ -158,7 +157,7 @@ fn update_camera_position(
     focus.y = terrain_data.map_or(0.0, |td| td.elevation_at(focus.xz()));
     transform.translation = focus + state.distance * up_to_camera;
 
-    events.write(GraphicsEvent::MoveCamera);
+    commands.write_message(GraphicsMessage::MoveCamera);
 }
 
 pub(crate) fn create_camera_position_text(
@@ -182,7 +181,7 @@ pub(crate) fn create_camera_position_text(
         },
         TextColor(Color::Srgba(GRAY)),
         CameraPositionLabel,
-        StateScoped(Screen::Playing),
+        DespawnOnExit(Screen::Playing),
     ));
 }
 

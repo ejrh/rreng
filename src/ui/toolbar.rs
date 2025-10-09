@@ -12,7 +12,6 @@ pub struct ToolbarPlugin {
 impl Plugin for ToolbarPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<ToolbarButton>()
             .add_systems(Update, toolbar_interaction)
             .add_systems(Update, button_changed);
     }
@@ -78,7 +77,7 @@ pub fn create_button<'a>(commands: &'a mut Commands, toolbar_line_id: Entity, en
                 border: UiRect::all(Val::Px(2.0)),
                 ..default()
             },
-            BorderColor(Color::WHITE),
+            BorderColor::all(Color::WHITE),
             BorderRadius::all(Val::Px(10.0)),
             BackgroundColor(Color::BLACK),
             ChildOf(toolbar_line_id)

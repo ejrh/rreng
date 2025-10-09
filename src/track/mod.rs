@@ -3,7 +3,7 @@ use bevy::math::Vec3;
 use bevy::prelude::{App, ChildOf, Commands, Entity, IntoScheduleConfigs, Name, Plugin, PostUpdate, Startup, Transform, Update, Visibility};
 
 use crate::track::point::Point;
-use crate::track::segment::{Segment, SegmentLinkage};
+use crate::track::segment::Segment;
 
 pub mod bridge;
 pub mod point;
@@ -23,9 +23,6 @@ pub struct TrackPlugin;
 impl Plugin for TrackPlugin {
     fn build(&self, app: &mut App) {
         app
-            .register_type::<Point>()
-            .register_type::<Segment>()
-            .register_type::<SegmentLinkage>()
             .add_systems(Startup, rendering::init_render_params)
             .add_systems(Update, (
                 point::move_points,

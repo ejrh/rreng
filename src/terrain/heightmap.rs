@@ -1,8 +1,8 @@
 use std::iter::zip;
 
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology};
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::asset::RenderAssetUsages;
+use bevy::mesh::{Indices, PrimitiveTopology};
 
 pub fn heightmap_to_mesh(heights: &ndarray::ArrayView2<f32>, scale: &Vec3) -> Mesh {
     let (height, width) = heights.dim();
