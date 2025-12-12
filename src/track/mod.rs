@@ -9,6 +9,7 @@ pub mod bridge;
 pub mod point;
 pub mod rendering;
 pub mod segment;
+pub mod create;
 
 /**
  * Height of rail surface above ground level.

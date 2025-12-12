@@ -15,13 +15,23 @@ impl Plugin for ToolsPlugin {
             .init_state::<TrackTool>()
             .add_plugins(ToolbarPlugin::default())
             .init_resource::<Tools>()
+            .init_gizmo_group::<crate::track::create::TrackPreviewGizmos>()
+            .add_systems(Startup, crate::track::create::setup_track_preview_gizmos)
             .add_systems(Update, update_tool_buttons)
             .add_systems(Update, update_terraform_tool_buttons)
             .add_systems(Update, update_track_tool_buttons)
             .add_systems(Update, (
                 terrain::edit::click_point.run_if(in_state(TerraformTool::Height)),
                 terrain::edit::drag_point.run_if(in_state(TerraformTool::Level))
-            ).run_if(in_state(Tool::Terraform)));
+            ).run_if(in_state(Tool::Terraform)))
+            .init_resource::<crate::track::create::TrackCreationSession>()
+            .init_resource::<crate::track::create::TrackCreationConstraints>()
+            .add_systems(Update, (
+                crate::track::create::handle_clicks,
+                crate::track::create::preview_gizmos,
+            )
+                .run_if(in_state(Tool::Track).and(in_state(TrackTool::Create)))
+            );
     }
 }
 

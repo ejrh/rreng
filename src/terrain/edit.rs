@@ -3,7 +3,7 @@ use std::ops::DerefMut;
 
 use bevy::input::ButtonInput;
 use bevy::log::info_span;
-use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, Single, With};
+use bevy::prelude::{Color, Gizmos, Local, MouseButton, Res, Single, With, Vec2, Vec3};
 use ndarray::{Array2, Ix, Ixs};
 
 use crate::level::LevelLabel;
@@ -105,6 +105,73 @@ pub fn drag_point(
     for range in ranges_to_dirty {
         terrain_data.dirty_range(range);
     }
+}
+
+pub fn terraform_along_segment(
+    mut terrain_data: &mut TerrainData,
+    from: Vec3,
+    to: Vec3,
+    sample_step_m: f32,
+    side_offset_m: f32,
+) {
+    let Some(elevation_arc) = terrain_data.layers.get(&TerrainLayer::Elevation) else { return; };
+    let mut guard = elevation_arc.write().unwrap();
+    let elevation = guard.deref_mut();
+
+    let _span = info_span!("terraform.track").entered();
+
+    let v = to - from;
+    let len = v.length();
+    if len <= 0.0 { return; }
+    let dir = v / len;
+    let step = sample_step_m.max(0.5);
+    let steps = (len / step).ceil() as i32;
+
+    let mut total_range = Range2::default();
+
+    for i in 0..=steps {
+        let s = (i as f32 * step).min(len);
+        let p = from + dir * s;
+
+        // Set target height along straight interpolation between endpoints' y
+        let t = if len > 0.0 { s / len } else { 0.0 };
+        let target_h = from.y + (to.y - from.y) * t;
+
+        // Helper to write a point (if in-bounds), propagate, and union its dirty range
+        let mut apply_point = |pt: Vec3, total_range: &mut Range2| {
+            let row = pt.z as Ix;
+            let col = pt.x as Ix;
+            if row >= elevation.dim().0 || col >= elevation.dim().1 { return; }
+            elevation[(row, col)] = target_h;
+            let range = propagate(row, col, elevation);
+            total_range.expand_to(range.0.start, range.1.start);
+            total_range.expand_to(range.0.end, range.1.end);
+        };
+
+        // Terraform across the full width by sweeping from left outer edge to right outer edge
+        let perp = Vec3::new(-dir.z, 0.0, dir.x);
+        let lateral_step = 1.0_f32; // metres
+        let left = -side_offset_m;
+        let right = side_offset_m;
+
+        let span = right - left;
+        let count = (span / lateral_step).floor() as i32; // number of full steps
+
+        for k in 0..=count {
+            let d = left + (k as f32) * lateral_step;
+            let off = perp * d; // dir is normalized, so perp has unit length in XZ
+            apply_point(p + off, &mut total_range);
+        }
+        // ensure we include the exact outer right edge if the step didn't land exactly
+        if left + (count as f32) * lateral_step < right {
+            let off = perp * right;
+            apply_point(p + off, &mut total_range);
+        }
+    }
+
+    drop(guard);
+
+    terrain_data.dirty_range(total_range);
 }
 
 fn propagate(crow: Ix, ccol: Ix, data: &mut Array2<f32>) -> Range2 {
